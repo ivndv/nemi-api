@@ -549,7 +549,7 @@ const apiDoc = createDocument({
 										url: {
 											type: "string",
 											example:
-												"https://gestor-assets.mgdc.site/abc123-imagen.jpg",
+												"https://assets.mgdc.site/nemi/abc123-imagen.jpg",
 										},
 									},
 								},

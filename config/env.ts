@@ -43,7 +43,7 @@ const envSchema = z.object({
 	R2_PUBLIC_URL: z
 		.string()
 		.url({ error: "R2_PUBLIC_URL debe ser una URL válida" })
-		.default("https://gestor-assets.mgdc.site"),
+		.default("https://assets.mgdc.site/nemi"),
 });
 
 // Valida las variables de entorno contra el esquema
