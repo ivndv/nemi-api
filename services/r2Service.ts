@@ -28,21 +28,23 @@ export async function subirAR2(
 	key: string,
 	contentType: string,
 ) {
+	const objectKey = key.startsWith("nemi/") ? key : `nemi/${key}`;
 	const command = new PutObjectCommand({
 		Bucket: env.R2_BUCKET_NAME,
-		Key: key,
+		Key: objectKey,
 		Body: fileBuffer,
 		ContentType: contentType,
 	});
 	await getS3Client().send(command);
-	return { url: `${env.R2_PUBLIC_URL}/${key}` };
+	return { url: `${env.R2_PUBLIC_URL}/${key.replace(/^nemi\//, "")}` };
 }
 
 // Elimina un archivo de R2 por su clave
 export async function eliminarDeR2(key: string) {
+	const objectKey = key.startsWith("nemi/") ? key : `nemi/${key}`;
 	const command = new DeleteObjectCommand({
 		Bucket: env.R2_BUCKET_NAME,
-		Key: key,
+		Key: objectKey,
 	});
 	await getS3Client().send(command);
 }
