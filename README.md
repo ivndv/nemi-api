@@ -13,10 +13,31 @@ Este proyecto funciona como la API del Gestor de Activos IT, un sistema diseñad
 
 ## Secciones
 
-1. **Autenticación**: Rutas para manejar el inicio de sesión de los administradores del sistema.
-2. **Dashboard**: Compila resúmenes estadísticos e información general del sistema.
-3. **Gestión de Recursos**: Archivos y rutas dedicadas a crear, modificar o eliminar registros de activos.
-4. **Asignaciones**: Módulo que conecta un equipo informático directamente con su usuario asignado.
+1. **Autenticación**: login con JWT y roles (Administrador).
+2. **Dashboard**: resumen y alertas del inventario.
+3. **Activos**: alta, consulta, edición y baja de equipos.
+4. **Asignaciones**: vínculo entre equipos y personal.
+5. **Historial**: cambios por activo.
+6. **Garantías**: vencimientos y mantenimientos.
+7. **Reportes**: generación de reportes.
+8. **Configuración**: datos de la aplicación y perfil.
+
+### Endpoints
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/api/health` | Estado del servicio |
+| `POST` | `/api/auth/login` | Inicio de sesión |
+| `POST` | `/api/auth/registro` | Alta de usuario (solo Administrador) |
+| `GET` | `/api/dashboard/resumen` | Resumen del inventario |
+| `GET` | `/api/dashboard/alertas` | Alertas de garantías y mantenimiento |
+| `GET` | `/api/gestion-activos/activos` | Listado de activos |
+| `GET` | `/api/asignaciones` | Asignaciones registradas |
+| `GET` | `/api/historial/activos/:id` | Historial de un activo |
+| `GET` | `/api/garantias` | Garantías y vencimientos |
+| `GET` | `/api/reportes/tipos` | Tipos de reporte |
+| `GET` | `/api/configuracion/aplicacion` | Configuración de la aplicación |
+| `GET` | `/api/docs` | Swagger UI |
 
 ## Uso
 
@@ -26,32 +47,16 @@ Este proyecto funciona como la API del Gestor de Activos IT, un sistema diseñad
 
 ## Tecnologías Utilizadas
 
-- Node.js
-- Express
-- Jest
-- npm
+- Bun
+- Express 5
+- TypeScript
+- Drizzle ORM
+- MySQL
+- Zod
+- Swagger (OpenAPI)
+- Biome
+- Docker
 
-## Instalación
-
-1. **Clonar el Repositorio**: Descarga el código de este proyecto en tu máquina local usando Git.
-
-```bash
-git clone https://github.com/Ivandv19/gestor-activos.git
-```
-
-2. **Instalar Dependencias**: Abre una terminal dentro de la carpeta del proyecto y ejecuta:
-
-```bash
-npm install
-```
-
-3. **Variables de Entorno**: Configura tu archivo `.env` en la raíz del proyecto con las credenciales de tu base de datos y llaves de seguridad necesarias.
-
-4. **Iniciar el Servidor**: Inicia la API localmente con el siguiente comando:
-
-```bash
-npm run dev
-```
 
 ## Créditos
 
@@ -63,12 +68,10 @@ Este es el proyecto encargado de la gestión de información para el sistema emp
 
 Este motor de datos se encuentra desplegado y administrado permanentemente a través de **Dokploy** en un servidor VPS.
 
-Puedes consultar la documentación interactiva de la API (Swagger) aquí: [Documentación API](https://nemi-backend.fluxdv.icu/api/docs/)
+Puedes consultar la documentación interactiva de la API (Swagger) aquí: [Nemi API](https://nemi-api.fluxdv.icu/api/docs)
 
 ## Licencia
 
-Licencia de Uso Personal:
+[PolyForm Noncommercial 1.0.0](LICENSE). Uso personal y no comercial; el uso comercial requiere permiso.
 
-Este software es propiedad de **Ivan Cruz**. Se permite el uso de este software solo para fines personales y no comerciales. No se permite la distribución, modificación ni uso comercial de este software sin el consentimiento expreso de **Ivan Cruz**.
-
-Cualquier uso no autorizado puede resultar en acciones legales.
+© 2026 Ivan Cruz
