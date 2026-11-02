@@ -1,74 +1,111 @@
-# Gestor de Activos IT (Backend)
+# Nemi API
 
 ## Descripción
 
-Este proyecto funciona como la API del Gestor de Activos IT, un sistema diseñado para administrar y rastrear los recursos tecnológicos de una organización. Este backend se encarga de procesar la lógica, validar la información y proveer los datos necesarios a la aplicación web.
+API central de Nemi: la plataforma interna de TI para administrar el ciclo de vida de los activos
+tecnológicos de una organización. Gestiona inventario, personas, sedes, asignaciones, licencias con
+asientos, garantías, mantenimientos, solicitudes, incidencias y auditoría.
+
+El modelo completo está documentado en [`docs/MODELO.md`](docs/MODELO.md).
 
 ## Características
 
-- **Inventario Centralizado**: Mantiene un registro estructurado del hardware, software y dispositivos de la empresa.
-- **Alertas Tempranas**: Calcula fechas para advertir sobre garantías próximas a expirar, licencias por vencer y activos en mantenimiento.
-- **Seguimiento de Ciclo de Vida**: Guarda el historial de cada equipo, desde su adquisición y asignación, hasta su baja.
-- **Búsqueda y Filtros**: Proporciona funciones para realizar búsquedas rápidas y filtrado por estado, tipo o ubicación.
+- **Inventario centralizado** de hardware, software, licencias y servicios.
+- **Licencias con asientos**: asignables a personas o equipos, con renovaciones.
+- **Asignaciones y devoluciones** con fecha pactada y fecha real.
+- **Garantías** múltiples por activo, sin solapamiento.
+- **Mantenimientos** internos o externos, con costo y diagnóstico.
+- **Solicitudes e incidencias** con flujo de aprobación y atención.
+- **Auditoría** de cada operación con diff antes/después.
+- **Roles**: administrador, técnico, almacén y empleado.
+- **Documentación OpenAPI** integrada.
 
-## Secciones
+## Endpoints
 
-1. **Autenticación**: login con JWT y roles (Administrador).
-2. **Dashboard**: resumen y alertas del inventario.
-3. **Activos**: alta, consulta, edición y baja de equipos.
-4. **Asignaciones**: vínculo entre equipos y personal.
-5. **Historial**: cambios por activo.
-6. **Garantías**: vencimientos y mantenimientos.
-7. **Reportes**: generación de reportes.
-8. **Configuración**: datos de la aplicación y perfil.
+La raíz `/` responde un JSON con enlaces a health, docs y OpenAPI.
 
-### Endpoints
+Públicos: `/api/health` (verifica la base de datos), `/api/docs`, `/api/doc`.
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| `GET` | `/api/health` | Estado del servicio |
-| `POST` | `/api/auth/login` | Inicio de sesión |
-| `POST` | `/api/auth/registro` | Alta de usuario (solo Administrador) |
-| `GET` | `/api/dashboard/resumen` | Resumen del inventario |
-| `GET` | `/api/dashboard/alertas` | Alertas de garantías y mantenimiento |
-| `GET` | `/api/gestion-activos/activos` | Listado de activos |
-| `GET` | `/api/asignaciones` | Asignaciones registradas |
-| `GET` | `/api/historial/activos/:id` | Historial de un activo |
-| `GET` | `/api/garantias` | Garantías y vencimientos |
-| `GET` | `/api/reportes/tipos` | Tipos de reporte |
-| `GET` | `/api/configuracion/aplicacion` | Configuración de la aplicación |
-| `GET` | `/api/docs` | Swagger UI |
+Protegidos con JWT:
+
+- `GET /api/gestion-activos/activos`
+- `GET /api/gestion-activos/activos/:id`
+- `POST|PUT|DELETE /api/gestion-activos/activos`
+- `PATCH /api/gestion-activos/baja/:id`
+- `GET|POST|PUT|DELETE /api/asignaciones`
+- `GET /api/dashboard/resumen`
+- `GET /api/dashboard/alertas`
+- `GET|POST|PUT|DELETE /api/garantias`
+- `GET /api/licencias` + asientos y renovaciones
+- `GET|POST|PUT|PATCH /api/mantenimientos`
+- `GET|POST|PATCH /api/incidencias`
+- `GET|POST|PATCH /api/solicitudes`
+- `GET|POST|DELETE /api/adjuntos`
+- `GET /api/historial/activos/:id`
+- `GET|POST /api/reportes` (catálogo filtrado por rol)
+- `GET|POST /api/personas` (solo administrador)
+- `GET|PUT /api/configuracion`
+- `POST /api/auth/login`
+- `POST /api/auth/registro`
 
 ## Uso
 
-- **Integración Base**: Esta API está diseñada para proveer los datos directamente a la aplicación en Angular.
-- **Formato Estándar**: Todas las comunicaciones y envío de datos se manejan en formato JSON.
-- **Rutas Protegidas**: Las operaciones de creación o edición de inventario requieren credenciales de autorización.
+Las rutas protegidas requieren el encabezado:
+
+```http
+Authorization: Bearer <token>
+```
+
+## Puesta en marcha
+
+```bash
+bun install
+cp .env.example .env        # ajusta credenciales
+bun run db:migrate          # aplica migraciones
+bun run db:seed             # datos iniciales
+bun run db:admin            # primer administrador en producción
+bun run dev
+```
+
+El seed crea un usuario por rol, todos con la contraseña `Nemi123!`:
+
+```
+admin@nemi.dev     administrador
+tecnico@nemi.dev   tecnico
+almacen@nemi.dev   almacen
+empleado@nemi.dev  empleado
+```
+
+## Migraciones
+
+```bash
+bun run db:generate   # genera SQL desde db/schema.ts
+bun run db:migrate    # aplica pendientes
+bun run db:verify     # conteos e invariantes
+bun run db:reset      # limpia la base (solo local)
+bun run db:check      # consistencia
+```
+
+Nunca uses `drizzle-kit push` fuera de una base local de pruebas.
 
 ## Tecnologías Utilizadas
 
-- Bun
-- Express 5
-- TypeScript
-- Drizzle ORM
-- MySQL
-- Zod
-- Swagger (OpenAPI)
-- Biome
-- Docker
-
-
-## Créditos
-
-Este es el proyecto encargado de la gestión de información para el sistema empresarial.
-
-- Desarrollado por Ivan Cruz.
+- **Runtime**: Bun
+- **Framework**: Express 5, Zod
+- **Base de datos**: MySQL 9, Drizzle ORM, Drizzle Kit
+- **Seguridad**: JWT, Helmet, rate limiting, API key con microservicio de hash
+- **Almacenamiento**: Cloudflare R2
+- **Documentación**: Swagger UI, zod-openapi
+- **Observabilidad**: logs estructurados con `requestId` y redacción de datos sensibles
+- **Linter**: Biome, TypeScript
+- **Contenedor**: Docker
 
 ## Despliegue
 
-Este motor de datos se encuentra desplegado y administrado permanentemente a través de **Dokploy** en un servidor VPS.
+Desplegado con Dokploy en un VPS. Swagger disponible en:
+[Nemi API](https://nemi-api.fluxdv.icu/api/docs)
 
-Puedes consultar la documentación interactiva de la API (Swagger) aquí: [Nemi API](https://nemi-api.fluxdv.icu/api/docs)
+El contenedor aplica las migraciones pendientes antes de arrancar.
 
 ## Licencia
 
