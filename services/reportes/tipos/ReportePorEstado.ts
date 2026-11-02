@@ -6,7 +6,9 @@ export class ReportePorEstado implements EstrategiaReporte {
 		const params: unknown[] = [];
 
 		if (filtros.usuario_id) {
-			conditions.push("asig.usuario_id = ?");
+			conditions.push(
+				"EXISTS (SELECT 1 FROM asignaciones s WHERE s.activo_id = a.id AND s.persona_id = ?)",
+			);
 			params.push(filtros.usuario_id);
 		}
 		if (filtros.ubicacion_id) {
@@ -14,11 +16,11 @@ export class ReportePorEstado implements EstrategiaReporte {
 			params.push(filtros.ubicacion_id);
 		}
 		if (filtros.fecha_inicio) {
-			conditions.push("a.fecha_registro >= ?");
+			conditions.push("a.created_at >= ?");
 			params.push(filtros.fecha_inicio);
 		}
 		if (filtros.fecha_fin) {
-			conditions.push("a.fecha_salida <= ?");
+			conditions.push("a.deleted_at <= ?");
 			params.push(filtros.fecha_fin);
 		}
 
@@ -29,8 +31,7 @@ export class ReportePorEstado implements EstrategiaReporte {
 			query: `
         SELECT a.estado, COUNT(*) AS cantidad
         FROM activos a
-        LEFT JOIN asignaciones asig ON a.id = asig.activo_id
-        WHERE a.activo = 1 ${where}
+        WHERE a.deleted_at IS NULL ${where}
         GROUP BY a.estado
       `,
 			params,

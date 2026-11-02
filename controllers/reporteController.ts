@@ -1,8 +1,7 @@
 // Express
 import type { Request, Response } from "express-serve-static-core";
-// Logger
-import { logger } from "../services/logger.js";
 // Servicios
+import { cacheGet, cacheWrap } from "../services/cacheService.js";
 import {
 	generarReporte,
 	getDatosAuxiliares,
@@ -10,65 +9,30 @@ import {
 } from "../services/reporteService.js";
 
 // Controller: tipos de reporte disponibles
-export const tiposReporte = async (_req: Request, res: Response) => {
-	try {
-		const tipos = await getTiposReporte();
-		res.status(200).json({ data: { tiposReporte: tipos } });
-	} catch (error: unknown) {
-		const message = (error as Error).message;
-		logger.error("[ERROR REPORTE]:", message);
-		if (message.toLowerCase().includes("no exist")) {
-			res.status(404).json({ error: message });
-			return;
-		}
-		if (message.toLowerCase().includes("no válido")) {
-			res.status(400).json({ error: message });
-			return;
-		}
-		res.status(500).json({ error: "Error en la consulta." });
-	}
+export const tiposReporte = async (req: Request, res: Response) => {
+	const tipos = await getTiposReporte(req.user?.rol ?? "empleado");
+	res.status(200).json({ data: { tiposReporte: tipos } });
 };
 
 // Controller: datos auxiliares para reportes
 export const datosAuxiliares = async (_req: Request, res: Response) => {
-	try {
-		const data = await getDatosAuxiliares();
-		res.json({ data });
-	} catch (error: unknown) {
-		const message = (error as Error).message;
-		logger.error("[ERROR REPORTE]:", message);
-		if (message.toLowerCase().includes("no exist")) {
-			res.status(404).json({ error: message });
-			return;
-		}
-		if (message.toLowerCase().includes("no válido")) {
-			res.status(400).json({ error: message });
-			return;
-		}
-		res.status(500).json({ error: "Error al obtener los datos auxiliares" });
-	}
+	const data = await getDatosAuxiliares();
+	res.json({ data });
 };
 
 // Controller: genera reporte según tipo y filtros
 export const generar = async (req: Request, res: Response) => {
-	try {
-		const { tipo_id, filtros = {} } = req.validated as {
-			tipo_id: number;
-			filtros?: Record<string, unknown>;
-		};
-		const result = await generarReporte(tipo_id, filtros);
-		res.json({ message: "Reporte generado exitosamente.", data: result });
-	} catch (error: unknown) {
-		const message = (error as Error).message;
-		logger.error("[ERROR REPORTE]:", message);
-		if (message.toLowerCase().includes("no exist")) {
-			res.status(404).json({ error: message });
-			return;
-		}
-		if (message.toLowerCase().includes("no válido")) {
-			res.status(400).json({ error: message });
-			return;
-		}
-		res.status(500).json({ error: "Error al generar el reporte." });
-	}
+	const { tipo_id, filtros = {} } = req.validated as {
+		tipo_id: number;
+		filtros?: Record<string, unknown>;
+	};
+	const version = (await cacheGet<number>("nemi:reportes:version")) ?? 0;
+	const cacheKey = `nemi:reportes:v${version}:${req.user?.rol ?? "empleado"}:${req.user?.id ?? 0}:${tipo_id}:${JSON.stringify(filtros)}`;
+	const result = await cacheWrap(cacheKey, 5 * 60, () =>
+		generarReporte(tipo_id, filtros, {
+			id: req.user?.id as number,
+			rol: req.user?.rol ?? "empleado",
+		}),
+	);
+	res.json({ message: "Reporte generado exitosamente.", data: result });
 };

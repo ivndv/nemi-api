@@ -24,7 +24,7 @@ export class ReportePorUbicacion implements EstrategiaReporte {
         SELECT u.nombre AS ubicacion, COUNT(a.id) AS cantidad
         FROM activos a
         JOIN ubicaciones u ON a.ubicacion_id = u.id
-        WHERE a.activo = 1 ${where}
+        WHERE a.deleted_at IS NULL ${where}
         GROUP BY u.nombre
       `,
 			params,

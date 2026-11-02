@@ -6,7 +6,7 @@ export class ReporteHistorial implements EstrategiaReporte {
 		const params: unknown[] = [];
 
 		if (filtros.usuario_id) {
-			conditions.push("asig.usuario_id = ?");
+			conditions.push("asig.persona_id = ?");
 			params.push(filtros.usuario_id);
 		}
 		if (filtros.ubicacion_id) {
@@ -22,7 +22,7 @@ export class ReporteHistorial implements EstrategiaReporte {
 			params.push(filtros.fecha_inicio);
 		}
 		if (filtros.fecha_fin) {
-			conditions.push("asig.fecha_devolucion <= ?");
+			conditions.push("asig.fecha_devolucion_real <= ?");
 			params.push(filtros.fecha_fin);
 		}
 
@@ -31,12 +31,12 @@ export class ReporteHistorial implements EstrategiaReporte {
 
 		return {
 			query: `
-        SELECT a.nombre AS activo, u.nombre AS usuario,
-               asig.fecha_asignacion, asig.fecha_devolucion
+        SELECT a.nombre AS activo, p.nombre AS usuario,
+               asig.fecha_asignacion, asig.fecha_devolucion_real
         FROM asignaciones asig
-        JOIN activos a ON asig.activo_id = a.id AND a.activo = 1
-        JOIN usuarios u ON asig.usuario_id = u.id
-        WHERE asig.activo = 1 ${where}
+        JOIN activos a ON asig.activo_id = a.id AND a.deleted_at IS NULL
+        JOIN personas p ON asig.persona_id = p.id
+        WHERE 1 = 1 ${where}
       `,
 			params,
 		};

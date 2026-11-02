@@ -1,4 +1,13 @@
+import { fechaHoyEnZona } from "../../zonaHoraria.js";
 import type { EstrategiaReporte } from "../EstrategiaReporte.js";
+
+const hoySQL = () => `'${fechaHoyEnZona()}'`;
+
+// Estado calculado de la garantía a partir de su fecha de fin
+const estadoGarantiaSQL = () => `CASE
+  WHEN g.fecha_fin < ${hoySQL()} THEN 'Vencida'
+  WHEN g.fecha_fin <= DATE_ADD(${hoySQL()}, INTERVAL 30 DAY) THEN 'Por vencer'
+  ELSE 'Vigente' END`;
 
 export class ReporteGarantias implements EstrategiaReporte {
 	buildQuery(filtros: Record<string, unknown>) {
@@ -7,7 +16,7 @@ export class ReporteGarantias implements EstrategiaReporte {
 
 		if (filtros.usuario_id) {
 			conditions.push(
-				"a.id IN (SELECT activo_id FROM asignaciones WHERE usuario_id = ?)",
+				"EXISTS (SELECT 1 FROM asignaciones s WHERE s.activo_id = a.id AND s.persona_id = ?)",
 			);
 			params.push(filtros.usuario_id);
 		}
@@ -16,7 +25,7 @@ export class ReporteGarantias implements EstrategiaReporte {
 			params.push(filtros.ubicacion_id);
 		}
 		if (filtros.proveedor_id) {
-			conditions.push("g.proveedor_garantia_id = ?");
+			conditions.push("g.proveedor_id = ?");
 			params.push(filtros.proveedor_id);
 		}
 		if (filtros.fecha_inicio) {
@@ -33,11 +42,11 @@ export class ReporteGarantias implements EstrategiaReporte {
 
 		return {
 			query: `
-        SELECT g.estado, COUNT(*) AS cantidad
+        SELECT ${estadoGarantiaSQL()} AS estado, COUNT(*) AS cantidad
         FROM garantias g
-        JOIN activos a ON g.activo_id = a.id AND a.activo = 1
-        WHERE g.activo = 1 ${where}
-        GROUP BY g.estado
+        JOIN activos a ON g.activo_id = a.id AND a.deleted_at IS NULL
+        WHERE g.deleted_at IS NULL ${where}
+        GROUP BY ${estadoGarantiaSQL()}
       `,
 			params,
 		};

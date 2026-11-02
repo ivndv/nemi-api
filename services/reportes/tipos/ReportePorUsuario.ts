@@ -6,7 +6,7 @@ export class ReportePorUsuario implements EstrategiaReporte {
 		const params: unknown[] = [];
 
 		if (filtros.usuario_id) {
-			conditions.push("asig.usuario_id = ?");
+			conditions.push("asig.persona_id = ?");
 			params.push(filtros.usuario_id);
 		}
 		if (filtros.ubicacion_id) {
@@ -18,7 +18,7 @@ export class ReportePorUsuario implements EstrategiaReporte {
 			params.push(filtros.fecha_inicio);
 		}
 		if (filtros.fecha_fin) {
-			conditions.push("asig.fecha_devolucion <= ?");
+			conditions.push("asig.fecha_devolucion_real <= ?");
 			params.push(filtros.fecha_fin);
 		}
 
@@ -27,12 +27,12 @@ export class ReportePorUsuario implements EstrategiaReporte {
 
 		return {
 			query: `
-        SELECT u.nombre AS usuario, COUNT(a.id) AS cantidad
+        SELECT p.nombre AS usuario, COUNT(a.id) AS cantidad
         FROM asignaciones asig
-        JOIN usuarios u ON asig.usuario_id = u.id
-        JOIN activos a ON asig.activo_id = a.id AND a.activo = 1
-        WHERE asig.activo = 1 ${where}
-        GROUP BY u.nombre
+        JOIN personas p ON asig.persona_id = p.id
+        JOIN activos a ON asig.activo_id = a.id AND a.deleted_at IS NULL
+        WHERE 1 = 1 ${where}
+        GROUP BY p.nombre
       `,
 			params,
 		};

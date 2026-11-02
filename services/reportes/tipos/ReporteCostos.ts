@@ -7,7 +7,7 @@ export class ReporteCostos implements EstrategiaReporte {
 
 		if (filtros.usuario_id) {
 			conditions.push(
-				"a.id IN (SELECT activo_id FROM asignaciones WHERE usuario_id = ?)",
+				"EXISTS (SELECT 1 FROM asignaciones s WHERE s.activo_id = a.id AND s.persona_id = ?)",
 			);
 			params.push(filtros.usuario_id);
 		}
@@ -23,8 +23,7 @@ export class ReporteCostos implements EstrategiaReporte {
 			query: `
         SELECT SUM(a.valor_compra) AS costo_total
         FROM activos a
-        LEFT JOIN asignaciones asig ON a.id = asig.activo_id
-        WHERE a.activo = 1 ${where}
+        WHERE a.deleted_at IS NULL ${where}
       `,
 			params,
 		};

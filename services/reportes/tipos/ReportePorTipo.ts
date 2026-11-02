@@ -23,8 +23,8 @@ export class ReportePorTipo implements EstrategiaReporte {
 			query: `
         SELECT t.nombre AS tipo, COUNT(a.id) AS cantidad
         FROM activos a
-        JOIN tipos t ON a.tipo_id = t.id
-        WHERE a.activo = 1 ${where}
+        JOIN tipos_activo t ON a.tipo_id = t.id
+        WHERE a.deleted_at IS NULL ${where}
         GROUP BY t.nombre
       `,
 			params,
