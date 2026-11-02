@@ -10,3 +10,13 @@ biome.json
 task.md
 implementation_plan.md
 walkthrough.md
+
+# Artefactos locales y metadatos: se reconstruyen dentro de la imagen
+dist
+.github
+
+# Documentación y estado local de wrangler
+docs
+.wrangler
+test-results
+.env.*

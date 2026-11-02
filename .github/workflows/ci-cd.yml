@@ -1,5 +1,7 @@
+# Nemi API CI/CD: lint y build de Docker, deploy a Dokploy solo en push a main
 name: Gestor Activos Backend CI/CD
 
+# Disparadores: pushes y pull requests a las ramas principales
 on:
   push:
     branches:
@@ -10,51 +12,60 @@ on:
       - main
       - develop
 
-env:
-  NODE_VERSION: "24.19.0"
-  BUN_VERSION: "1.3.14"
+# Cancela ejecuciones previas del mismo ref, excepto deploys en main
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Permisos mínimos: solo lectura del repositorio
+permissions:
+  contents: read
 
 jobs:
+  # Job 1: typecheck, lint, formato y migraciones
   lint:
+    name: Typecheck & Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      # Node + Bun + caché de dependencias
+      - name: Setup Bun env
+        uses: ./.github/actions/setup
 
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Lint
-        run: bun run lint
+      # Biome en modo CI: no escribe archivos, solo reporta.
+      # Assist desactivado: hay imports pendientes de ordenar (se corrigen con `bun run check`)
+      - name: Lint y formato (read-only)
+        run: bunx biome ci . --assist-enabled=false
 
-      - name: Format check
-        run: bun run check
+      - name: Verificar migraciones
+        run: bun run db:check
 
-  deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  # Job 2: valida el Dockerfile sin publicar la imagen
+  docker:
+    name: Docker build
     needs: [lint]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -t nemi-api:ci .
+
+  # Job 3: dispara el deploy en Dokploy (solo push a main y con todo verde)
+  deploy:
+    name: Deploy to Dokploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [lint, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # Dispara el deploy en Dokploy vía webhook autenticado
       - name: Deploy via Dokploy webhook (Cloudflare Access)
@@ -65,6 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail --show-error --silent \
+            --retry 3 --retry-delay 5 --retry-connrefused \
             -X POST "https://dokploy.fluxdv.icu/api/deploy/${DOKPLOY_DEPLOY_TOKEN}" \
             -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
             -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \

@@ -24,5 +24,6 @@ dist-ssr
 *.sw?
 db-init/
 .env
-docs/
+docs/*
+!docs/MODELO.md
 .codegraph/
