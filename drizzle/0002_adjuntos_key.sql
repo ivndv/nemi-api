@@ -1,0 +1,1 @@
+ALTER TABLE `adjuntos` ADD `key` varchar(500);

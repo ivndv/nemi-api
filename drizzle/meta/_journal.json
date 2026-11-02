@@ -1,0 +1,69 @@
+{
+	"version": "7",
+	"dialect": "mysql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "5",
+			"when": 1793565401728,
+			"tag": "0000_init",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "5",
+			"when": 1793565693206,
+			"tag": "0001_fecha_ingreso",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "5",
+			"when": 1793570280832,
+			"tag": "0002_adjuntos_key",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "5",
+			"when": 1793573225308,
+			"tag": "0003_unicos_activos",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "5",
+			"when": 1793573361405,
+			"tag": "0004_timestamps_indices",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "5",
+			"when": 1793630326975,
+			"tag": "0005_roles_tablas",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "5",
+			"when": 1793630346972,
+			"tag": "0006_drop_rol",
+			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "5",
+			"when": 1793649249398,
+			"tag": "0007_faulty_big_bertha",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "5",
+			"when": 1793649372956,
+			"tag": "0008_accion_desbloqueo",
+			"breakpoints": true
+		}
+	]
+}

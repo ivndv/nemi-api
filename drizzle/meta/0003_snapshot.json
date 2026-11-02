@@ -1,0 +1,2476 @@
+{
+	"version": "5",
+	"dialect": "mysql",
+	"id": "f3f99a78-5285-4380-a4c4-643a542175a1",
+	"prevId": "3c6cfdfc-90ad-4641-bd66-24504c1c6d08",
+	"tables": {
+		"acciones": {
+			"name": "acciones",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"slug": {
+					"name": "slug",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(150)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				}
+			},
+			"indexes": {
+				"uq_acciones_slug": {
+					"name": "uq_acciones_slug",
+					"columns": ["slug"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {
+				"acciones_id": {
+					"name": "acciones_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"activos": {
+			"name": "activos",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"tipo_id": {
+					"name": "tipo_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"proveedor_id": {
+					"name": "proveedor_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"ubicacion_id": {
+					"name": "ubicacion_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"dueno_id": {
+					"name": "dueno_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"etiqueta_serial": {
+					"name": "etiqueta_serial",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"serial_activo": {
+					"name": "serial_activo",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`deleted_at` is null, `etiqueta_serial`, null)",
+						"type": "stored"
+					}
+				},
+				"estado": {
+					"name": "estado",
+					"type": "enum('disponible','asignado','mantenimiento')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'disponible'"
+				},
+				"condicion": {
+					"name": "condicion",
+					"type": "enum('nuevo','usado','danado')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'nuevo'"
+				},
+				"fecha_adquisicion": {
+					"name": "fecha_adquisicion",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"valor_compra": {
+					"name": "valor_compra",
+					"type": "decimal(12,2)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"modelo": {
+					"name": "modelo",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"descripcion": {
+					"name": "descripcion",
+					"type": "varchar(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"foto_url": {
+					"name": "foto_url",
+					"type": "varchar(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"uq_activos_serial_activo": {
+					"name": "uq_activos_serial_activo",
+					"columns": ["serial_activo"],
+					"isUnique": true
+				},
+				"idx_activos_tipo": {
+					"name": "idx_activos_tipo",
+					"columns": ["tipo_id"],
+					"isUnique": false
+				},
+				"idx_activos_proveedor": {
+					"name": "idx_activos_proveedor",
+					"columns": ["proveedor_id"],
+					"isUnique": false
+				},
+				"idx_activos_ubicacion": {
+					"name": "idx_activos_ubicacion",
+					"columns": ["ubicacion_id"],
+					"isUnique": false
+				},
+				"idx_activos_dueno": {
+					"name": "idx_activos_dueno",
+					"columns": ["dueno_id"],
+					"isUnique": false
+				},
+				"idx_activos_estado": {
+					"name": "idx_activos_estado",
+					"columns": ["estado"],
+					"isUnique": false
+				},
+				"idx_activos_deleted": {
+					"name": "idx_activos_deleted",
+					"columns": ["deleted_at"],
+					"isUnique": false
+				},
+				"idx_activos_vigentes": {
+					"name": "idx_activos_vigentes",
+					"columns": ["deleted_at", "estado"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_activos_tipo": {
+					"name": "fk_activos_tipo",
+					"tableFrom": "activos",
+					"tableTo": "tipos_activo",
+					"columnsFrom": ["tipo_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_activos_proveedor": {
+					"name": "fk_activos_proveedor",
+					"tableFrom": "activos",
+					"tableTo": "proveedores",
+					"columnsFrom": ["proveedor_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_activos_ubicacion": {
+					"name": "fk_activos_ubicacion",
+					"tableFrom": "activos",
+					"tableTo": "ubicaciones",
+					"columnsFrom": ["ubicacion_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				},
+				"fk_activos_dueno": {
+					"name": "fk_activos_dueno",
+					"tableFrom": "activos",
+					"tableTo": "personas",
+					"columnsFrom": ["dueno_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"activos_id": {
+					"name": "activos_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"adjuntos": {
+			"name": "adjuntos",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"entidad": {
+					"name": "entidad",
+					"type": "enum('activo','licencia','garantia','mantenimiento','incidencia','solicitud')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"entidad_id": {
+					"name": "entidad_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"tipo": {
+					"name": "tipo",
+					"type": "enum('factura','poliza','acta','foto','otro')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'otro'"
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"key": {
+					"name": "key",
+					"type": "varchar(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"url": {
+					"name": "url",
+					"type": "varchar(500)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"mime": {
+					"name": "mime",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"tamano": {
+					"name": "tamano",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"subido_por": {
+					"name": "subido_por",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				}
+			},
+			"indexes": {
+				"idx_adjuntos_entidad": {
+					"name": "idx_adjuntos_entidad",
+					"columns": ["entidad", "entidad_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_adjuntos_persona": {
+					"name": "fk_adjuntos_persona",
+					"tableFrom": "adjuntos",
+					"tableTo": "personas",
+					"columnsFrom": ["subido_por"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"adjuntos_id": {
+					"name": "adjuntos_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"asignaciones": {
+			"name": "asignaciones",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"activo_id": {
+					"name": "activo_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"persona_id": {
+					"name": "persona_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"departamento_id": {
+					"name": "departamento_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"ubicacion_id": {
+					"name": "ubicacion_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fecha_asignacion": {
+					"name": "fecha_asignacion",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fecha_devolucion_pactada": {
+					"name": "fecha_devolucion_pactada",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"fecha_devolucion_real": {
+					"name": "fecha_devolucion_real",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"comentarios": {
+					"name": "comentarios",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"slot_activo": {
+					"name": "slot_activo",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`fecha_devolucion_real` is null, 1, null)",
+						"type": "stored"
+					}
+				}
+			},
+			"indexes": {
+				"uq_asignacion_activa": {
+					"name": "uq_asignacion_activa",
+					"columns": ["activo_id", "slot_activo"],
+					"isUnique": true
+				},
+				"idx_asignaciones_persona": {
+					"name": "idx_asignaciones_persona",
+					"columns": ["persona_id"],
+					"isUnique": false
+				},
+				"idx_asignaciones_devolucion": {
+					"name": "idx_asignaciones_devolucion",
+					"columns": ["fecha_devolucion_real"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_asignaciones_activo": {
+					"name": "fk_asignaciones_activo",
+					"tableFrom": "asignaciones",
+					"tableTo": "activos",
+					"columnsFrom": ["activo_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_asignaciones_persona": {
+					"name": "fk_asignaciones_persona",
+					"tableFrom": "asignaciones",
+					"tableTo": "personas",
+					"columnsFrom": ["persona_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_asignaciones_departamento": {
+					"name": "fk_asignaciones_departamento",
+					"tableFrom": "asignaciones",
+					"tableTo": "departamentos",
+					"columnsFrom": ["departamento_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_asignaciones_ubicacion": {
+					"name": "fk_asignaciones_ubicacion",
+					"tableFrom": "asignaciones",
+					"tableTo": "ubicaciones",
+					"columnsFrom": ["ubicacion_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"asignaciones_id": {
+					"name": "asignaciones_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {
+				"chk_asignaciones_fechas": {
+					"name": "chk_asignaciones_fechas",
+					"value": "`asignaciones`.`fecha_devolucion_real` is null or `asignaciones`.`fecha_devolucion_real` >= `asignaciones`.`fecha_asignacion`"
+				}
+			}
+		},
+		"asignaciones_licencia": {
+			"name": "asignaciones_licencia",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"licencia_id": {
+					"name": "licencia_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"asiento": {
+					"name": "asiento",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"destino_tipo": {
+					"name": "destino_tipo",
+					"type": "enum('persona','activo')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"persona_id": {
+					"name": "persona_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"activo_id": {
+					"name": "activo_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"fecha_asignacion": {
+					"name": "fecha_asignacion",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fecha_liberacion": {
+					"name": "fecha_liberacion",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"slot_asiento": {
+					"name": "slot_asiento",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`fecha_liberacion` is null, `asiento`, null)",
+						"type": "stored"
+					}
+				}
+			},
+			"indexes": {
+				"uq_asiento_activo": {
+					"name": "uq_asiento_activo",
+					"columns": ["licencia_id", "slot_asiento"],
+					"isUnique": true
+				},
+				"idx_asignaciones_licencia_persona": {
+					"name": "idx_asignaciones_licencia_persona",
+					"columns": ["persona_id"],
+					"isUnique": false
+				},
+				"idx_asignaciones_licencia_activo": {
+					"name": "idx_asignaciones_licencia_activo",
+					"columns": ["activo_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_asignaciones_licencia_licencia": {
+					"name": "fk_asignaciones_licencia_licencia",
+					"tableFrom": "asignaciones_licencia",
+					"tableTo": "licencias",
+					"columnsFrom": ["licencia_id"],
+					"columnsTo": ["activo_id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_asignaciones_licencia_persona": {
+					"name": "fk_asignaciones_licencia_persona",
+					"tableFrom": "asignaciones_licencia",
+					"tableTo": "personas",
+					"columnsFrom": ["persona_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_asignaciones_licencia_activo": {
+					"name": "fk_asignaciones_licencia_activo",
+					"tableFrom": "asignaciones_licencia",
+					"tableTo": "activos",
+					"columnsFrom": ["activo_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"asignaciones_licencia_id": {
+					"name": "asignaciones_licencia_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {
+				"chk_asientos_positivos": {
+					"name": "chk_asientos_positivos",
+					"value": "`asignaciones_licencia`.`asiento` > 0"
+				},
+				"chk_asignaciones_licencia_destino": {
+					"name": "chk_asignaciones_licencia_destino",
+					"value": "(`asignaciones_licencia`.`destino_tipo` = 'persona' and `asignaciones_licencia`.`persona_id` is not null and `asignaciones_licencia`.`activo_id` is null) or (`asignaciones_licencia`.`destino_tipo` = 'activo' and `asignaciones_licencia`.`activo_id` is not null and `asignaciones_licencia`.`persona_id` is null)"
+				}
+			}
+		},
+		"configuracion": {
+			"name": "configuracion",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "tinyint",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 1
+				},
+				"idioma": {
+					"name": "idioma",
+					"type": "varchar(10)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'es'"
+				},
+				"zona_horaria": {
+					"name": "zona_horaria",
+					"type": "varchar(50)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'America/Mexico_City'"
+				},
+				"moneda": {
+					"name": "moneda",
+					"type": "varchar(3)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'MXN'"
+				},
+				"formato_fecha": {
+					"name": "formato_fecha",
+					"type": "varchar(20)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'DD/MM/YYYY'"
+				},
+				"dias_alerta_licencia": {
+					"name": "dias_alerta_licencia",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 30
+				},
+				"dias_alerta_garantia": {
+					"name": "dias_alerta_garantia",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 30
+				},
+				"dias_alerta_devolucion": {
+					"name": "dias_alerta_devolucion",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 7
+				},
+				"dias_alerta_mantenimiento": {
+					"name": "dias_alerta_mantenimiento",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 3
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {
+				"configuracion_id": {
+					"name": "configuracion_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {
+				"chk_configuracion_unica": {
+					"name": "chk_configuracion_unica",
+					"value": "`configuracion`.`id` = 1"
+				}
+			}
+		},
+		"departamentos": {
+			"name": "departamentos",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"nombre_activo": {
+					"name": "nombre_activo",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`deleted_at` is null, `nombre`, null)",
+						"type": "stored"
+					}
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"uq_departamentos_nombre_activo": {
+					"name": "uq_departamentos_nombre_activo",
+					"columns": ["nombre_activo"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {
+				"departamentos_id": {
+					"name": "departamentos_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"eventos": {
+			"name": "eventos",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"entidad": {
+					"name": "entidad",
+					"type": "enum('activo','licencia','asignacion','garantia','mantenimiento','solicitud','incidencia','persona')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"entidad_id": {
+					"name": "entidad_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"accion_id": {
+					"name": "accion_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"actor_id": {
+					"name": "actor_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"datos_anteriores": {
+					"name": "datos_anteriores",
+					"type": "json",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"datos_nuevos": {
+					"name": "datos_nuevos",
+					"type": "json",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				}
+			},
+			"indexes": {
+				"idx_eventos_entidad": {
+					"name": "idx_eventos_entidad",
+					"columns": ["entidad", "entidad_id"],
+					"isUnique": false
+				},
+				"idx_eventos_accion": {
+					"name": "idx_eventos_accion",
+					"columns": ["accion_id"],
+					"isUnique": false
+				},
+				"idx_eventos_actor": {
+					"name": "idx_eventos_actor",
+					"columns": ["actor_id"],
+					"isUnique": false
+				},
+				"idx_eventos_fecha": {
+					"name": "idx_eventos_fecha",
+					"columns": ["created_at"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_eventos_accion": {
+					"name": "fk_eventos_accion",
+					"tableFrom": "eventos",
+					"tableTo": "acciones",
+					"columnsFrom": ["accion_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_eventos_actor": {
+					"name": "fk_eventos_actor",
+					"tableFrom": "eventos",
+					"tableTo": "personas",
+					"columnsFrom": ["actor_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"eventos_id": {
+					"name": "eventos_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"garantias": {
+			"name": "garantias",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"activo_id": {
+					"name": "activo_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"proveedor_id": {
+					"name": "proveedor_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fecha_inicio": {
+					"name": "fecha_inicio",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fecha_fin": {
+					"name": "fecha_fin",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"costo": {
+					"name": "costo",
+					"type": "decimal(12,2)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"condiciones": {
+					"name": "condiciones",
+					"type": "varchar(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"descripcion": {
+					"name": "descripcion",
+					"type": "varchar(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_garantias_activo": {
+					"name": "idx_garantias_activo",
+					"columns": ["activo_id"],
+					"isUnique": false
+				},
+				"idx_garantias_fecha_fin": {
+					"name": "idx_garantias_fecha_fin",
+					"columns": ["fecha_fin"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_garantias_activo": {
+					"name": "fk_garantias_activo",
+					"tableFrom": "garantias",
+					"tableTo": "activos",
+					"columnsFrom": ["activo_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_garantias_proveedor": {
+					"name": "fk_garantias_proveedor",
+					"tableFrom": "garantias",
+					"tableTo": "proveedores",
+					"columnsFrom": ["proveedor_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"garantias_id": {
+					"name": "garantias_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {
+				"chk_garantias_fechas": {
+					"name": "chk_garantias_fechas",
+					"value": "`garantias`.`fecha_fin` > `garantias`.`fecha_inicio`"
+				}
+			}
+		},
+		"incidencias": {
+			"name": "incidencias",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"activo_id": {
+					"name": "activo_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"reportante_id": {
+					"name": "reportante_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"descripcion": {
+					"name": "descripcion",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"prioridad": {
+					"name": "prioridad",
+					"type": "enum('baja','media','alta')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'media'"
+				},
+				"estado": {
+					"name": "estado",
+					"type": "enum('abierta','en_revision','resuelta','cerrada')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'abierta'"
+				},
+				"mantenimiento_id": {
+					"name": "mantenimiento_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"fecha_resolucion": {
+					"name": "fecha_resolucion",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_incidencias_estado": {
+					"name": "idx_incidencias_estado",
+					"columns": ["estado"],
+					"isUnique": false
+				},
+				"idx_incidencias_activo": {
+					"name": "idx_incidencias_activo",
+					"columns": ["activo_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_incidencias_activo": {
+					"name": "fk_incidencias_activo",
+					"tableFrom": "incidencias",
+					"tableTo": "activos",
+					"columnsFrom": ["activo_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_incidencias_reportante": {
+					"name": "fk_incidencias_reportante",
+					"tableFrom": "incidencias",
+					"tableTo": "personas",
+					"columnsFrom": ["reportante_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_incidencias_mantenimiento": {
+					"name": "fk_incidencias_mantenimiento",
+					"tableFrom": "incidencias",
+					"tableTo": "mantenimientos",
+					"columnsFrom": ["mantenimiento_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"incidencias_id": {
+					"name": "incidencias_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"licencias": {
+			"name": "licencias",
+			"columns": {
+				"activo_id": {
+					"name": "activo_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"modalidad": {
+					"name": "modalidad",
+					"type": "enum('perpetua','suscripcion')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"tipo_uso": {
+					"name": "tipo_uso",
+					"type": "enum('dispositivo','usuario','concurrente','volumen')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"asientos_comprados": {
+					"name": "asientos_comprados",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 1
+				},
+				"costo": {
+					"name": "costo",
+					"type": "decimal(12,2)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"periodicidad_costo": {
+					"name": "periodicidad_costo",
+					"type": "enum('mensual','anual','unica')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'anual'"
+				},
+				"referencia_clave": {
+					"name": "referencia_clave",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"renovacion_automatica": {
+					"name": "renovacion_automatica",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"fecha_renovacion": {
+					"name": "fecha_renovacion",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_licencias_renovacion": {
+					"name": "idx_licencias_renovacion",
+					"columns": ["fecha_renovacion"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_licencias_activo": {
+					"name": "fk_licencias_activo",
+					"tableFrom": "licencias",
+					"tableTo": "activos",
+					"columnsFrom": ["activo_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"licencias_activo_id": {
+					"name": "licencias_activo_id",
+					"columns": ["activo_id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {
+				"chk_licencias_asientos": {
+					"name": "chk_licencias_asientos",
+					"value": "`licencias`.`asientos_comprados` > 0"
+				}
+			}
+		},
+		"mantenimientos": {
+			"name": "mantenimientos",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"activo_id": {
+					"name": "activo_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"responsable": {
+					"name": "responsable",
+					"type": "enum('interno','externo')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"tecnico_id": {
+					"name": "tecnico_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"proveedor_id": {
+					"name": "proveedor_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"tipo": {
+					"name": "tipo",
+					"type": "enum('preventivo','correctivo')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fecha_salida": {
+					"name": "fecha_salida",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fecha_retorno": {
+					"name": "fecha_retorno",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"diagnostico": {
+					"name": "diagnostico",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"costo": {
+					"name": "costo",
+					"type": "decimal(12,2)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"estado": {
+					"name": "estado",
+					"type": "enum('abierto','cerrado')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'abierto'"
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"slot_abierto": {
+					"name": "slot_abierto",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`estado` = 'abierto', 1, null)",
+						"type": "stored"
+					}
+				}
+			},
+			"indexes": {
+				"uq_mantenimiento_abierto": {
+					"name": "uq_mantenimiento_abierto",
+					"columns": ["activo_id", "slot_abierto"],
+					"isUnique": true
+				},
+				"idx_mantenimientos_estado": {
+					"name": "idx_mantenimientos_estado",
+					"columns": ["estado"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_mantenimientos_activo": {
+					"name": "fk_mantenimientos_activo",
+					"tableFrom": "mantenimientos",
+					"tableTo": "activos",
+					"columnsFrom": ["activo_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_mantenimientos_tecnico": {
+					"name": "fk_mantenimientos_tecnico",
+					"tableFrom": "mantenimientos",
+					"tableTo": "personas",
+					"columnsFrom": ["tecnico_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_mantenimientos_proveedor": {
+					"name": "fk_mantenimientos_proveedor",
+					"tableFrom": "mantenimientos",
+					"tableTo": "proveedores",
+					"columnsFrom": ["proveedor_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"mantenimientos_id": {
+					"name": "mantenimientos_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {
+				"chk_mantenimientos_responsable": {
+					"name": "chk_mantenimientos_responsable",
+					"value": "(`mantenimientos`.`responsable` = 'interno' and `mantenimientos`.`tecnico_id` is not null) or (`mantenimientos`.`responsable` = 'externo' and `mantenimientos`.`proveedor_id` is not null)"
+				},
+				"chk_mantenimientos_fechas": {
+					"name": "chk_mantenimientos_fechas",
+					"value": "`mantenimientos`.`fecha_retorno` is null or `mantenimientos`.`fecha_retorno` >= `mantenimientos`.`fecha_salida`"
+				}
+			}
+		},
+		"personas": {
+			"name": "personas",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"email": {
+					"name": "email",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"email_activo": {
+					"name": "email_activo",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`deleted_at` is null, `email`, null)",
+						"type": "stored"
+					}
+				},
+				"contrasena": {
+					"name": "contrasena",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"departamento_id": {
+					"name": "departamento_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"sede_id": {
+					"name": "sede_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"fecha_ingreso": {
+					"name": "fecha_ingreso",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"rol": {
+					"name": "rol",
+					"type": "enum('administrador','tecnico','almacen','empleado')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'empleado'"
+				},
+				"foto_url": {
+					"name": "foto_url",
+					"type": "varchar(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"ultimo_acceso": {
+					"name": "ultimo_acceso",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"uq_personas_email_activo": {
+					"name": "uq_personas_email_activo",
+					"columns": ["email_activo"],
+					"isUnique": true
+				},
+				"idx_personas_departamento": {
+					"name": "idx_personas_departamento",
+					"columns": ["departamento_id"],
+					"isUnique": false
+				},
+				"idx_personas_sede": {
+					"name": "idx_personas_sede",
+					"columns": ["sede_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_personas_departamento": {
+					"name": "fk_personas_departamento",
+					"tableFrom": "personas",
+					"tableTo": "departamentos",
+					"columnsFrom": ["departamento_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				},
+				"fk_personas_sede": {
+					"name": "fk_personas_sede",
+					"tableFrom": "personas",
+					"tableTo": "sedes",
+					"columnsFrom": ["sede_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"personas_id": {
+					"name": "personas_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"proveedores": {
+			"name": "proveedores",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"nombre_activo": {
+					"name": "nombre_activo",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`deleted_at` is null, `nombre`, null)",
+						"type": "stored"
+					}
+				},
+				"tipo": {
+					"name": "tipo",
+					"type": "enum('bienes','servicios','ambos')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'bienes'"
+				},
+				"contacto": {
+					"name": "contacto",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"telefono": {
+					"name": "telefono",
+					"type": "varchar(30)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"email": {
+					"name": "email",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"direccion": {
+					"name": "direccion",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"notas": {
+					"name": "notas",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"uq_proveedores_nombre": {
+					"name": "uq_proveedores_nombre",
+					"columns": ["nombre"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {
+				"proveedores_id": {
+					"name": "proveedores_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"renovaciones_licencia": {
+			"name": "renovaciones_licencia",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"licencia_id": {
+					"name": "licencia_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fecha": {
+					"name": "fecha",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"asientos": {
+					"name": "asientos",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"costo": {
+					"name": "costo",
+					"type": "decimal(12,2)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"adjunto_id": {
+					"name": "adjunto_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				}
+			},
+			"indexes": {
+				"idx_renovaciones_licencia": {
+					"name": "idx_renovaciones_licencia",
+					"columns": ["licencia_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_renovaciones_licencia": {
+					"name": "fk_renovaciones_licencia",
+					"tableFrom": "renovaciones_licencia",
+					"tableTo": "licencias",
+					"columnsFrom": ["licencia_id"],
+					"columnsTo": ["activo_id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"fk_renovaciones_adjunto": {
+					"name": "fk_renovaciones_adjunto",
+					"tableFrom": "renovaciones_licencia",
+					"tableTo": "adjuntos",
+					"columnsFrom": ["adjunto_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"renovaciones_licencia_id": {
+					"name": "renovaciones_licencia_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"sedes": {
+			"name": "sedes",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(150)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"nombre_activo": {
+					"name": "nombre_activo",
+					"type": "varchar(150)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`deleted_at` is null, `nombre`, null)",
+						"type": "stored"
+					}
+				},
+				"ciudad": {
+					"name": "ciudad",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"direccion": {
+					"name": "direccion",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"uq_sedes_nombre_activo": {
+					"name": "uq_sedes_nombre_activo",
+					"columns": ["nombre_activo"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {
+				"sedes_id": {
+					"name": "sedes_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"solicitudes": {
+			"name": "solicitudes",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"solicitante_id": {
+					"name": "solicitante_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"tipo": {
+					"name": "tipo",
+					"type": "enum('equipo','licencia','accesorio','reemplazo')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"tipo_activo_id": {
+					"name": "tipo_activo_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"motivo": {
+					"name": "motivo",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"prioridad": {
+					"name": "prioridad",
+					"type": "enum('baja','media','alta')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'media'"
+				},
+				"estado": {
+					"name": "estado",
+					"type": "enum('pendiente','aprobada','rechazada','entregada')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'pendiente'"
+				},
+				"resuelta_por": {
+					"name": "resuelta_por",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"activo_id": {
+					"name": "activo_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"fecha_resolucion": {
+					"name": "fecha_resolucion",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_solicitudes_estado": {
+					"name": "idx_solicitudes_estado",
+					"columns": ["estado"],
+					"isUnique": false
+				},
+				"idx_solicitudes_solicitante": {
+					"name": "idx_solicitudes_solicitante",
+					"columns": ["solicitante_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_solicitudes_solicitante": {
+					"name": "fk_solicitudes_solicitante",
+					"tableFrom": "solicitudes",
+					"tableTo": "personas",
+					"columnsFrom": ["solicitante_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_solicitudes_resuelta_por": {
+					"name": "fk_solicitudes_resuelta_por",
+					"tableFrom": "solicitudes",
+					"tableTo": "personas",
+					"columnsFrom": ["resuelta_por"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				},
+				"fk_solicitudes_tipo_activo": {
+					"name": "fk_solicitudes_tipo_activo",
+					"tableFrom": "solicitudes",
+					"tableTo": "tipos_activo",
+					"columnsFrom": ["tipo_activo_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				},
+				"fk_solicitudes_activo": {
+					"name": "fk_solicitudes_activo",
+					"tableFrom": "solicitudes",
+					"tableTo": "activos",
+					"columnsFrom": ["activo_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"solicitudes_id": {
+					"name": "solicitudes_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"tipos_activo": {
+			"name": "tipos_activo",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"nombre_activo": {
+					"name": "nombre_activo",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`deleted_at` is null, `nombre`, null)",
+						"type": "stored"
+					}
+				},
+				"slug": {
+					"name": "slug",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"slug_activo": {
+					"name": "slug_activo",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`deleted_at` is null, `slug`, null)",
+						"type": "stored"
+					}
+				},
+				"categoria": {
+					"name": "categoria",
+					"type": "enum('hardware','software','licencia','servicio','accesorio')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'hardware'"
+				},
+				"descripcion": {
+					"name": "descripcion",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"uq_tipos_activo_nombre_activo": {
+					"name": "uq_tipos_activo_nombre_activo",
+					"columns": ["nombre_activo"],
+					"isUnique": true
+				},
+				"uq_tipos_activo_slug_activo": {
+					"name": "uq_tipos_activo_slug_activo",
+					"columns": ["slug_activo"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {
+				"tipos_activo_id": {
+					"name": "tipos_activo_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"tipos_reporte": {
+			"name": "tipos_reporte",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"slug": {
+					"name": "slug",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"descripcion": {
+					"name": "descripcion",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"activo": {
+					"name": "activo",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"uq_tipos_reporte_slug": {
+					"name": "uq_tipos_reporte_slug",
+					"columns": ["slug"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {
+				"tipos_reporte_id": {
+					"name": "tipos_reporte_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"ubicaciones": {
+			"name": "ubicaciones",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"sede_id": {
+					"name": "sede_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"padre_id": {
+					"name": "padre_id",
+					"type": "int",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"nombre": {
+					"name": "nombre",
+					"type": "varchar(150)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"nombre_activo": {
+					"name": "nombre_activo",
+					"type": "varchar(150)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"generated": {
+						"as": "if(`deleted_at` is null, `nombre`, null)",
+						"type": "stored"
+					}
+				},
+				"tipo": {
+					"name": "tipo",
+					"type": "enum('edificio','piso','sala','almacen')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'sala'"
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"onUpdate": true,
+					"default": "(now())"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"uq_ubicaciones_sede_nombre_activo": {
+					"name": "uq_ubicaciones_sede_nombre_activo",
+					"columns": ["sede_id", "nombre_activo"],
+					"isUnique": true
+				},
+				"idx_ubicaciones_sede": {
+					"name": "idx_ubicaciones_sede",
+					"columns": ["sede_id"],
+					"isUnique": false
+				},
+				"idx_ubicaciones_padre": {
+					"name": "idx_ubicaciones_padre",
+					"columns": ["padre_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"fk_ubicaciones_sede": {
+					"name": "fk_ubicaciones_sede",
+					"tableFrom": "ubicaciones",
+					"tableTo": "sedes",
+					"columnsFrom": ["sede_id"],
+					"columnsTo": ["id"],
+					"onDelete": "restrict",
+					"onUpdate": "no action"
+				},
+				"fk_ubicaciones_padre": {
+					"name": "fk_ubicaciones_padre",
+					"tableFrom": "ubicaciones",
+					"tableTo": "ubicaciones",
+					"columnsFrom": ["padre_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"ubicaciones_id": {
+					"name": "ubicaciones_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		}
+	},
+	"views": {},
+	"_meta": {
+		"schemas": {},
+		"tables": {},
+		"columns": {}
+	},
+	"internal": {
+		"tables": {},
+		"indexes": {}
+	}
+}
