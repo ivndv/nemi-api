@@ -59,7 +59,11 @@ export function generarClave(nombre: string | undefined, mimetype: string) {
 				? ".png"
 				: mimetype === "image/webp"
 					? ".webp"
-					: ".svg";
+					: mimetype === "application/pdf"
+						? ".pdf"
+						: mimetype === "image/svg+xml"
+							? ".svg"
+							: ".bin";
 	const slug = nombre
 		? nombre
 				.toLowerCase()

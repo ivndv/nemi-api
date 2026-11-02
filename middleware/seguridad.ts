@@ -5,8 +5,16 @@ import helmet from "helmet";
 // Configuración
 import env from "../config/env.js";
 
-// Middleware: CORS — solo permite solicitudes desde el frontend configurado
-export const corsMiddleware = cors({ origin: env.FRONTEND_URL });
+// Orígenes permitidos: CORS_ORIGINS o, si no existe, FRONTEND_URL
+const origenes = (env.CORS_ORIGINS ?? env.FRONTEND_URL)
+	.split(",")
+	.map((origen) => origen.trim())
+	.filter(Boolean);
+
+// Middleware: CORS — solo permite los orígenes configurados
+export const corsMiddleware = cors({
+	origin: origenes.length === 1 ? origenes[0] : origenes,
+});
 
 // Middleware: Helmet — cabeceras de seguridad HTTP
 export const helmetMiddleware = helmet({

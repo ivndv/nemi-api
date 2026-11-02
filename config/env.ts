@@ -8,6 +8,19 @@ const envSchema = z.object({
 		.string()
 		.url({ error: "FRONTEND_URL debe ser una URL válida" })
 		.default("http://localhost:4200"),
+	// Lista separada por comas; si existe, reemplaza a FRONTEND_URL
+	CORS_ORIGINS: z.string().optional(),
+
+	// Entorno y documentación
+	NODE_ENV: z
+		.enum(["development", "test", "production"])
+		.default("development"),
+	ENABLE_DOCS: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform((valor) => valor === "true"),
+	DOCS_USER: z.string().optional(),
+	DOCS_PASS: z.string().optional(),
 
 	// Base de datos
 	DB_HOST: z.string().min(1, { error: "DB_HOST es requerido" }),
@@ -15,6 +28,12 @@ const envSchema = z.object({
 	DB_USER: z.string().min(1, { error: "DB_USER es requerido" }),
 	DB_PASSWORD: z.string().min(1, { error: "DB_PASSWORD es requerido" }),
 	DB_NAME: z.string().min(1, { error: "DB_NAME es requerido" }),
+
+	// Redis (caché y rate limit)
+	REDIS_URL: z
+		.string()
+		.url({ error: "REDIS_URL debe ser una URL válida" })
+		.optional(),
 
 	// JWT
 	JWT_SECRET: z.string().min(32, {
