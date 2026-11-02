@@ -3,22 +3,31 @@ import express from "express";
 
 const router = express.Router();
 
+// Valida el id de la ruta antes del controller
+router.param("id", validarParamId);
+
 // Controladores
 import * as asignacionesController from "../controllers/asignacionesController.js";
 // Middleware
 import { autenticar } from "../middleware/autenticar.js";
 import { permisos } from "../middleware/permisos.js";
-import { validar } from "../middleware/validar.js";
+import {
+	validar,
+	validarParamId,
+	validarQuery,
+} from "../middleware/validar.js";
 // Schemas
 import {
 	createAsignacionSchema,
 	updateAsignacionSchema,
 } from "../schemas/asignaciones.js";
+import { asignacionesQuerySchema } from "../schemas/query.js";
 
 // GET /api/asignaciones/activos-disponibles — activos libres para asignar
 router.get(
 	"/activos-disponibles",
 	autenticar,
+	validarQuery(asignacionesQuerySchema),
 	asignacionesController.getActivosDisponibles,
 );
 
@@ -33,13 +42,18 @@ router.get(
 router.get("/:id", autenticar, asignacionesController.getAsignacionPorId);
 
 // GET /api/asignaciones/ — lista paginada de asignaciones
-router.get("/", autenticar, asignacionesController.getAsignaciones);
+router.get(
+	"/",
+	autenticar,
+	validarQuery(asignacionesQuerySchema),
+	asignacionesController.getAsignaciones,
+);
 
 // POST /api/asignaciones/ — crea asignación (cambia estado del activo)
 router.post(
 	"/",
 	autenticar,
-	permisos("Administrador"),
+	permisos("Administrador", "Técnico", "Almacén"),
 	validar(createAsignacionSchema),
 	asignacionesController.createAsignacion,
 );
@@ -48,7 +62,7 @@ router.post(
 router.put(
 	"/:id",
 	autenticar,
-	permisos("Administrador"),
+	permisos("Administrador", "Técnico", "Almacén"),
 	validar(updateAsignacionSchema),
 	asignacionesController.updateAsignacion,
 );
@@ -57,7 +71,7 @@ router.put(
 router.delete(
 	"/:id",
 	autenticar,
-	permisos("Administrador"),
+	permisos("Administrador", "Técnico", "Almacén"),
 	asignacionesController.deleteAsignacion,
 );
 

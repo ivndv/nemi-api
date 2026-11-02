@@ -1,14 +1,19 @@
-import { and, asc, count, desc, eq, like, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, like, or, sql } from "drizzle-orm";
 import db from "../config/db.js";
 import {
 	activos,
 	asignaciones,
-	historial,
+	departamentos,
+	licencias,
+	personas,
 	proveedores,
-	tipos,
+	tiposActivo,
 	ubicaciones,
-	usuarios,
 } from "../db/schema.js";
+import { ErrorHttp } from "./errors.js";
+import { registrarEvento } from "./eventosService.js";
+import { etiquetaEstado } from "./presentacion.js";
+import { fechaHoyEnZona } from "./zonaHoraria.js";
 
 // Consultas de asignaciones
 
@@ -24,9 +29,8 @@ export async function getAsignaciones(
 	},
 	usuarioId?: number,
 ) {
-	// Paginación y orden seguro
-	const page = queryParams_.page || 1;
-	const limit = Math.min(queryParams_.limit || 10, 100);
+	const page = Number(queryParams_.page) || 1;
+	const limit = Math.min(Number(queryParams_.limit) || 10, 100);
 	const offset = (page - 1) * limit;
 
 	const orden = queryParams_.orden || "asc";
@@ -34,44 +38,47 @@ export async function getAsignaciones(
 
 	const { search = "", tipo, ubicacion, usuario_asignado } = queryParams_;
 
-	// Construcción dinámica de filtros
-	const filters = [
+	const filtros = [
 		...(search
 			? [
 					or(
 						sql`CAST(${activos.id} AS CHAR) LIKE ${`%${search}%`}`,
-						sql`MATCH(${activos.nombre}) AGAINST(${`${search}*`} IN BOOLEAN MODE)`,
+						like(activos.nombre, `%${search}%`),
 					),
 				]
 			: []),
-		...(tipo ? [eq(tipos.id, Number(tipo))] : []),
+		...(tipo ? [eq(tiposActivo.id, Number(tipo))] : []),
 		...(ubicacion ? [eq(ubicaciones.id, Number(ubicacion))] : []),
-		...(usuario_asignado ? [eq(usuarios.id, Number(usuario_asignado))] : []),
-		eq(asignaciones.activo, 1),
-		...(usuarioId ? [eq(asignaciones.usuario_id, usuarioId)] : []),
+		...(usuario_asignado ? [eq(personas.id, Number(usuario_asignado))] : []),
+		...(usuarioId ? [eq(asignaciones.persona_id, usuarioId)] : []),
 	];
 
-	const results = await db
+	const filas = await db
 		.select({
 			id: asignaciones.id,
-			activo: activos.nombre,
-			tipo_activo: tipos.nombre,
+			nombre: activos.nombre,
+			tipo_activo: tiposActivo.nombre,
 			estado_activo: activos.estado,
-			usuario: usuarios.nombre,
+			usuario: personas.nombre,
 			ubicacion: ubicaciones.nombre,
-			fecha_asignacion: asignaciones.fecha_asignacion,
-			fecha_devolucion: asignaciones.fecha_devolucion,
-			comentarios: asignaciones.comentarios,
 			foto_url: activos.foto_url,
+			usuario_id: asignaciones.persona_id,
+			ubicacion_id: asignaciones.ubicacion_id,
+			fecha_asignacion: asignaciones.fecha_asignacion,
+			fecha_devolucion_real: asignaciones.fecha_devolucion_real,
+			fecha_devolucion_pactada: asignaciones.fecha_devolucion_pactada,
+			comentarios: asignaciones.comentarios,
 		})
 		.from(asignaciones)
 		.innerJoin(activos, eq(asignaciones.activo_id, activos.id))
-		.innerJoin(tipos, eq(activos.tipo_id, tipos.id))
-		.innerJoin(usuarios, eq(asignaciones.usuario_id, usuarios.id))
+		.leftJoin(tiposActivo, eq(activos.tipo_id, tiposActivo.id))
+		.innerJoin(personas, eq(asignaciones.persona_id, personas.id))
 		.innerJoin(ubicaciones, eq(asignaciones.ubicacion_id, ubicaciones.id))
-		.where(and(...filters, eq(activos.activo, 1)))
+		.where(filtros.length > 0 ? and(...filtros) : undefined)
 		.orderBy(
-			safeOrder === "DESC" ? desc(asignaciones.id) : asc(asignaciones.id),
+			safeOrder === "DESC"
+				? desc(asignaciones.fecha_asignacion)
+				: asc(asignaciones.fecha_asignacion),
 		)
 		.limit(limit)
 		.offset(offset);
@@ -80,67 +87,87 @@ export async function getAsignaciones(
 		.select({ total: count() })
 		.from(asignaciones)
 		.innerJoin(activos, eq(asignaciones.activo_id, activos.id))
-		.innerJoin(tipos, eq(activos.tipo_id, tipos.id))
-		.innerJoin(usuarios, eq(asignaciones.usuario_id, usuarios.id))
+		.leftJoin(tiposActivo, eq(activos.tipo_id, tiposActivo.id))
+		.innerJoin(personas, eq(asignaciones.persona_id, personas.id))
 		.innerJoin(ubicaciones, eq(asignaciones.ubicacion_id, ubicaciones.id))
-		.where(and(...filters));
+		.where(filtros.length > 0 ? and(...filtros) : undefined);
 
-	const totalAsignaciones = Number(totalResult.total);
+	const data = filas.map((fila) => ({
+		id: fila.id,
+		nombre: fila.nombre,
+		tipo_activo: fila.tipo_activo,
+		estado_activo: etiquetaEstado(fila.estado_activo),
+		usuario: fila.usuario,
+		ubicacion: fila.ubicacion,
+		foto_url: fila.foto_url,
+		usuario_id: fila.usuario_id,
+		ubicacion_id: fila.ubicacion_id,
+		fecha_asignacion: fila.fecha_asignacion,
+		fecha_devolucion:
+			fila.fecha_devolucion_real ?? fila.fecha_devolucion_pactada,
+		comentarios: fila.comentarios,
+	}));
 
 	return {
-		data: results,
+		data,
 		pagination: {
 			page,
 			limit,
-			total: totalAsignaciones,
-			totalPages: Math.ceil(totalAsignaciones / limit),
+			total: totalResult.total,
+			totalPages: Math.ceil(totalResult.total / limit),
 		},
 	};
 }
 
-// Obtiene una asignación por su ID con datos relacionados
 export async function getAsignacionPorId(id: string) {
-	const [asignacion] = await db
+	const [fila] = await db
 		.select({
 			id: asignaciones.id,
 			activo_id: asignaciones.activo_id,
-			activo_nombre: activos.nombre,
-			activo_foto: activos.foto_url,
-			usuario_id: asignaciones.usuario_id,
-			usuario_nombre: usuarios.nombre,
+			nombre: activos.nombre,
+			tipo_activo: tiposActivo.nombre,
+			estado_activo: activos.estado,
+			usuario: personas.nombre,
+			ubicacion: ubicaciones.nombre,
+			foto_url: activos.foto_url,
+			usuario_id: asignaciones.persona_id,
 			ubicacion_id: asignaciones.ubicacion_id,
-			ubicacion_nombre: ubicaciones.nombre,
 			fecha_asignacion: asignaciones.fecha_asignacion,
-			fecha_devolucion: asignaciones.fecha_devolucion,
+			fecha_devolucion_real: asignaciones.fecha_devolucion_real,
+			fecha_devolucion_pactada: asignaciones.fecha_devolucion_pactada,
 			comentarios: asignaciones.comentarios,
 		})
 		.from(asignaciones)
-		.leftJoin(activos, eq(asignaciones.activo_id, activos.id))
-		.leftJoin(usuarios, eq(asignaciones.usuario_id, usuarios.id))
-		.leftJoin(ubicaciones, eq(asignaciones.ubicacion_id, ubicaciones.id))
-		.where(eq(asignaciones.id, Number(id)));
+		.innerJoin(activos, eq(asignaciones.activo_id, activos.id))
+		.leftJoin(tiposActivo, eq(activos.tipo_id, tiposActivo.id))
+		.innerJoin(personas, eq(asignaciones.persona_id, personas.id))
+		.innerJoin(ubicaciones, eq(asignaciones.ubicacion_id, ubicaciones.id))
+		.where(eq(asignaciones.id, Number(id)))
+		.limit(1);
 
-	if (!asignacion) {
-		throw new Error("La asignación no existe.");
+	if (!fila) {
+		throw new ErrorHttp(404, "La asignación no existe.");
 	}
 
 	return {
-		id: asignacion.id,
-		activo_id: asignacion.activo_id,
-		nombre: asignacion.activo_nombre,
-		foto_url: asignacion.activo_foto,
-		usuario_id: asignacion.usuario_id,
-		usuario_nombre: asignacion.usuario_nombre,
-		ubicacion_id: asignacion.ubicacion_id,
-		ubicacion_nombre: asignacion.ubicacion_nombre,
-		fecha_asignacion: asignacion.fecha_asignacion,
-		fecha_devolucion: asignacion.fecha_devolucion,
-		comentarios: asignacion.comentarios,
+		id: fila.id,
+		activo_id: fila.activo_id,
+		nombre: fila.nombre,
+		tipo_activo: fila.tipo_activo,
+		estado_activo: etiquetaEstado(fila.estado_activo),
+		usuario: fila.usuario,
+		ubicacion: fila.ubicacion,
+		foto_url: fila.foto_url,
+		usuario_id: fila.usuario_id,
+		ubicacion_id: fila.ubicacion_id,
+		fecha_asignacion: fila.fecha_asignacion,
+		fecha_devolucion:
+			fila.fecha_devolucion_real ?? fila.fecha_devolucion_pactada,
+		comentarios: fila.comentarios,
 	};
 }
 
 // Creación de asignaciones
-
 export async function createAsignacion(
 	input: {
 		activo_id: number;
@@ -159,92 +186,118 @@ export async function createAsignacion(
 		fecha_devolucion,
 	} = input;
 
-	// Valida que el activo, usuario y ubicación existan
-	const [activoCheck] = await db
-		.select({ total: count() })
-		.from(activos)
-		.where(and(eq(activos.id, activo_id), eq(activos.activo, 1)));
-
-	if (!activoCheck.total) {
-		throw new Error("El activo no existe o está dado de baja.");
+	if (!usuarioResponsableId) {
+		throw new ErrorHttp(403, "Acceso no autorizado.");
 	}
 
-	const [usuarioCheck] = await db
-		.select({ total: count() })
-		.from(usuarios)
-		.where(eq(usuarios.id, usuario_id));
+	const [persona] = await db
+		.select({
+			nombre: personas.nombre,
+			departamento_id: personas.departamento_id,
+		})
+		.from(personas)
+		.where(and(eq(personas.id, usuario_id), isNull(personas.deleted_at)))
+		.limit(1);
 
-	if (!usuarioCheck.total) {
-		throw new Error("El usuario no existe.");
+	if (!persona) {
+		throw new ErrorHttp(404, "El usuario no existe.");
 	}
 
-	const [ubicacionCheck] = await db
-		.select({ total: count() })
-		.from(ubicaciones)
-		.where(eq(ubicaciones.id, ubicacion_id));
-
-	if (!ubicacionCheck.total) {
-		throw new Error("La ubicación no existe.");
+	if (!persona.departamento_id) {
+		throw new ErrorHttp(400, "El usuario no tiene departamento asignado.");
 	}
 
-	const [activo] = await db
-		.select({ nombre: activos.nombre })
-		.from(activos)
-		.where(eq(activos.id, activo_id));
-	const [usuario] = await db
-		.select({ nombre: usuarios.nombre })
-		.from(usuarios)
-		.where(eq(usuarios.id, usuario_id));
 	const [ubicacion] = await db
 		.select({ nombre: ubicaciones.nombre })
 		.from(ubicaciones)
-		.where(eq(ubicaciones.id, ubicacion_id));
+		.where(eq(ubicaciones.id, ubicacion_id))
+		.limit(1);
 
-	const comentariosDinamicos = `Activo "${activo.nombre}" asignado al usuario "${usuario.nombre}" en la ubicación "${ubicacion.nombre}".`;
+	if (!ubicacion) {
+		throw new ErrorHttp(404, "La ubicación no existe.");
+	}
 
-	// Transacción: inserta la asignación, actualiza estado del activo y registra historial
 	return await db.transaction(async (tx) => {
-		const [result] = await tx.insert(asignaciones).values({
-			activo_id,
-			usuario_id,
-			ubicacion_id,
-			fecha_asignacion: new Date(fecha_asignacion),
-			fecha_devolucion: fecha_devolucion ? new Date(fecha_devolucion) : null,
-			comentarios: comentariosDinamicos,
-		});
+		// Bloquea el activo para evitar asignaciones simultáneas
+		const [activo] = await tx
+			.select({
+				id: activos.id,
+				nombre: activos.nombre,
+				estado: activos.estado,
+			})
+			.from(activos)
+			.where(and(eq(activos.id, activo_id), isNull(activos.deleted_at)))
+			.for("update")
+			.limit(1);
+
+		if (!activo) {
+			throw new ErrorHttp(404, "El activo no existe o está dado de baja.");
+		}
+
+		if (activo.estado !== "disponible") {
+			throw new ErrorHttp(400, "El activo no está disponible para asignar.");
+		}
+
+		// Las licencias se asignan por asientos, no como hardware
+		const [licencia] = await tx
+			.select({ activo_id: licencias.activo_id })
+			.from(licencias)
+			.where(eq(licencias.activo_id, activo_id))
+			.limit(1);
+
+		if (licencia) {
+			throw new ErrorHttp(
+				400,
+				"Las licencias se asignan por asientos, no como activo de hardware.",
+			);
+		}
+
+		const comentarios = `Activo "${activo.nombre}" asignado a "${persona.nombre}" en "${ubicacion.nombre}".`;
+
+		const [creada] = await tx
+			.insert(asignaciones)
+			.values({
+				activo_id,
+				persona_id: usuario_id,
+				departamento_id: persona.departamento_id as number,
+				ubicacion_id,
+				fecha_asignacion,
+				fecha_devolucion_pactada: fecha_devolucion || null,
+				comentarios,
+			})
+			.$returningId();
 
 		await tx
 			.update(activos)
-			.set({ estado: "Asignado" })
+			.set({ estado: "asignado", ubicacion_id })
 			.where(eq(activos.id, activo_id));
 
-		if (!usuarioResponsableId) {
-			throw new Error("Acceso no autorizado.");
-		}
-
-		await tx.insert(historial).values({
-			activo_id,
-			accion: "Activo asignado",
-			usuario_responsable: usuarioResponsableId,
-			usuario_asignado: usuario_id,
-			ubicacion_nueva: ubicacion_id,
-			detalles: comentariosDinamicos,
+		await registrarEvento(tx, {
+			entidad: "asignacion",
+			entidad_id: creada.id,
+			accion: "asignacion.creada",
+			actor_id: usuarioResponsableId,
+			nuevos: {
+				activo_id,
+				persona_id: usuario_id,
+				ubicacion_id,
+				detalles: comentarios,
+			},
 		});
 
 		return {
-			id: result.insertId,
+			id: creada.id,
 			activo_id,
 			usuario_id,
 			ubicacion_id,
 			fecha_asignacion,
 			fecha_devolucion: fecha_devolucion || null,
-			comentarios: comentariosDinamicos,
+			comentarios,
 		};
 	});
 }
 
-// Actualización de asignaciones
-
+// Actualización de asignaciones (devolución o cambio de persona/ubicación)
 export async function updateAsignacion(
 	id: string,
 	input: {
@@ -256,112 +309,97 @@ export async function updateAsignacion(
 ) {
 	const { fecha_devolucion, usuario_id, ubicacion_id } = input;
 
-	// Verifica que la asignación exista antes de modificarla
-	const [asignacionExistente] = await db
-		.select()
-		.from(asignaciones)
-		.where(eq(asignaciones.id, Number(id)));
-
-	if (!asignacionExistente) {
-		throw new Error("La asignación no existe.");
-	}
-
-	const [activoActual] = await db
-		.select({ nombre: activos.nombre })
-		.from(activos)
-		.where(eq(activos.id, asignacionExistente.activo_id));
-	const [usuarioAnterior] = await db
-		.select({ nombre: usuarios.nombre })
-		.from(usuarios)
-		.where(eq(usuarios.id, asignacionExistente.usuario_id));
-	const [ubicacionAnterior] = await db
-		.select({ nombre: ubicaciones.nombre })
-		.from(ubicaciones)
-		.where(eq(ubicaciones.id, asignacionExistente.ubicacion_id));
-
-	if (!activoActual || !usuarioAnterior || !ubicacionAnterior) {
-		throw new Error(
-			"Uno de los datos relacionados no existe en la base de datos.",
-		);
-	}
-
-	let nuevoUsuarioNombre = usuarioAnterior.nombre;
-	if (usuario_id && usuario_id !== asignacionExistente.usuario_id) {
-		const [nuevoUsuario] = await db
-			.select({ nombre: usuarios.nombre })
-			.from(usuarios)
-			.where(eq(usuarios.id, usuario_id));
-
-		if (!nuevoUsuario) {
-			throw new Error("El nuevo usuario no existe.");
-		}
-		nuevoUsuarioNombre = nuevoUsuario.nombre;
-	}
-
-	let nuevaUbicacionNombre = ubicacionAnterior.nombre;
-	if (ubicacion_id && ubicacion_id !== asignacionExistente.ubicacion_id) {
-		const [nuevaUbicacion] = await db
-			.select({ nombre: ubicaciones.nombre })
-			.from(ubicaciones)
-			.where(eq(ubicaciones.id, ubicacion_id));
-
-		if (!nuevaUbicacion) {
-			throw new Error("La nueva ubicación no existe.");
-		}
-		nuevaUbicacionNombre = nuevaUbicacion.nombre;
-	}
-
-	let comentariosDinamicos = "";
-
-	if (
-		fecha_devolucion &&
-		fecha_devolucion !==
-			asignacionExistente.fecha_devolucion?.toISOString().split("T")[0]
-	) {
-		const fechaValida = new Date(fecha_devolucion);
-		if (Number.isNaN(fechaValida.getTime())) {
-			throw new Error("El formato de la fecha de devolución es inválido.");
-		}
-		comentariosDinamicos += `Fecha de devolución actualizada a "${fecha_devolucion}". `;
-	}
-
-	if (usuario_id && usuario_id !== asignacionExistente.usuario_id) {
-		comentariosDinamicos += `Usuario asignado cambiado de "${usuarioAnterior.nombre}" a "${nuevoUsuarioNombre}". `;
-	}
-
-	if (ubicacion_id && ubicacion_id !== asignacionExistente.ubicacion_id) {
-		comentariosDinamicos += `Ubicación cambiada de "${ubicacionAnterior.nombre}" a "${nuevaUbicacionNombre}". `;
-	}
-
-	if (!comentariosDinamicos) {
-		comentariosDinamicos = "Sin cambios adicionales.";
-	}
-
-	const nuevoComentario = `Activo "${activoActual.nombre}" asignado al usuario "${nuevoUsuarioNombre}" en la ubicación "${nuevaUbicacionNombre}".`;
-
-	const updateValues: Record<string, unknown> = {};
-	if (fecha_devolucion)
-		updateValues.fecha_devolucion = new Date(fecha_devolucion);
-	if (usuario_id) updateValues.usuario_id = usuario_id;
-	if (ubicacion_id) updateValues.ubicacion_id = ubicacion_id;
-	updateValues.comentarios = nuevoComentario;
-
-	await db
-		.update(asignaciones)
-		.set(updateValues)
-		.where(eq(asignaciones.id, Number(id)));
-
 	if (!usuarioResponsableId) {
-		throw new Error("Acceso no autorizado.");
+		throw new ErrorHttp(403, "Acceso no autorizado.");
 	}
 
-	await db.insert(historial).values({
-		activo_id: asignacionExistente.activo_id,
-		accion: "Asignación actualizada",
-		usuario_responsable: usuarioResponsableId,
-		usuario_asignado: usuario_id || asignacionExistente.usuario_id,
-		ubicacion_nueva: ubicacion_id || asignacionExistente.ubicacion_id,
-		detalles: comentariosDinamicos,
+	await db.transaction(async (tx) => {
+		const [existente] = await tx
+			.select()
+			.from(asignaciones)
+			.where(eq(asignaciones.id, Number(id)))
+			.for("update")
+			.limit(1);
+
+		if (!existente) {
+			throw new ErrorHttp(404, "La asignación no existe.");
+		}
+
+		const cambios: Partial<typeof asignaciones.$inferInsert> = {};
+
+		if (usuario_id && usuario_id !== existente.persona_id) {
+			const [persona] = await tx
+				.select({
+					nombre: personas.nombre,
+					departamento_id: personas.departamento_id,
+				})
+				.from(personas)
+				.where(and(eq(personas.id, usuario_id), isNull(personas.deleted_at)))
+				.limit(1);
+
+			if (!persona) throw new Error("El nuevo usuario no existe.");
+			if (!persona.departamento_id) {
+				throw new ErrorHttp(
+					400,
+					"El nuevo usuario no tiene departamento asignado.",
+				);
+			}
+
+			cambios.persona_id = usuario_id;
+			cambios.departamento_id = persona.departamento_id;
+		}
+
+		if (ubicacion_id && ubicacion_id !== existente.ubicacion_id) {
+			const [ubicacion] = await tx
+				.select({ id: ubicaciones.id })
+				.from(ubicaciones)
+				.where(eq(ubicaciones.id, ubicacion_id))
+				.limit(1);
+
+			if (!ubicacion) throw new ErrorHttp(404, "La nueva ubicación no existe.");
+			cambios.ubicacion_id = ubicacion_id;
+		}
+
+		if (fecha_devolucion) {
+			cambios.fecha_devolucion_real = fecha_devolucion;
+		}
+
+		if (Object.keys(cambios).length === 0) {
+			throw new ErrorHttp(400, "No se proporcionaron cambios válidos.");
+		}
+
+		await tx
+			.update(asignaciones)
+			.set(cambios)
+			.where(eq(asignaciones.id, existente.id));
+
+		// Si se registra la devolución, el activo queda disponible
+		if (fecha_devolucion && !existente.fecha_devolucion_real) {
+			await tx
+				.update(activos)
+				.set({ estado: "disponible" })
+				.where(eq(activos.id, existente.activo_id));
+		}
+
+		await registrarEvento(tx, {
+			entidad: "asignacion",
+			entidad_id: existente.id,
+			accion: fecha_devolucion
+				? "asignacion.devuelta"
+				: "asignacion.actualizada",
+			actor_id: usuarioResponsableId,
+			anteriores: {
+				persona_id: existente.persona_id,
+				ubicacion_id: existente.ubicacion_id,
+				fecha_devolucion_real: existente.fecha_devolucion_real,
+			},
+			nuevos: {
+				persona_id: cambios.persona_id ?? existente.persona_id,
+				ubicacion_id: cambios.ubicacion_id ?? existente.ubicacion_id,
+				fecha_devolucion_real:
+					cambios.fecha_devolucion_real ?? existente.fecha_devolucion_real,
+			},
+		});
 	});
 }
 
@@ -369,45 +407,40 @@ export async function deleteAsignacion(
 	id: string,
 	usuarioResponsableId?: number,
 ) {
-	const [asignacion] = await db
-		.select({
-			asignacion_id: asignaciones.id,
-			activo_id: asignaciones.activo_id,
-			activo_nombre: activos.nombre,
-		})
-		.from(asignaciones)
-		.innerJoin(activos, eq(asignaciones.activo_id, activos.id))
-		.where(eq(asignaciones.id, Number(id)));
-
-	if (!asignacion) {
-		throw new Error("Asignación no encontrada");
+	if (!usuarioResponsableId) {
+		throw new ErrorHttp(403, "Acceso no autorizado.");
 	}
 
-	const { activo_id, activo_nombre } = asignacion;
-
 	await db.transaction(async (tx) => {
-		await tx
-			.update(activos)
-			.set({ estado: "Disponible" })
-			.where(eq(activos.id, activo_id));
+		const [existente] = await tx
+			.select()
+			.from(asignaciones)
+			.where(eq(asignaciones.id, Number(id)))
+			.for("update")
+			.limit(1);
 
-		await tx
-			.update(asignaciones)
-			.set({ activo: 0 })
-			.where(eq(asignaciones.id, Number(id)));
-
-		const accion = "Desasignado";
-		const detalles = `Se desasignó el activo "${activo_nombre}" del usuario.`;
-
-		if (!usuarioResponsableId) {
-			throw new Error("Acceso no autorizado.");
+		if (!existente) {
+			throw new ErrorHttp(404, "Asignación no encontrada");
 		}
 
-		await tx.insert(historial).values({
-			activo_id,
-			accion,
-			usuario_responsable: usuarioResponsableId,
-			detalles,
+		if (!existente.fecha_devolucion_real) {
+			await tx
+				.update(asignaciones)
+				.set({ fecha_devolucion_real: fechaHoyEnZona() })
+				.where(eq(asignaciones.id, existente.id));
+
+			await tx
+				.update(activos)
+				.set({ estado: "disponible" })
+				.where(eq(activos.id, existente.activo_id));
+		}
+
+		await registrarEvento(tx, {
+			entidad: "asignacion",
+			entidad_id: existente.id,
+			accion: "asignacion.devuelta",
+			actor_id: usuarioResponsableId,
+			nuevos: { activo_id: existente.activo_id, motivo: "desasignación" },
 		});
 	});
 }
@@ -421,8 +454,8 @@ export async function getActivosDisponibles(queryParams_: {
 	ubicacion?: string;
 	proveedores?: string;
 }) {
-	const page = queryParams_.page || 1;
-	const limit = Math.min(queryParams_.limit || 10, 100);
+	const page = Number(queryParams_.page) || 1;
+	const limit = Math.min(Number(queryParams_.limit) || 10, 100);
 	const offset = (page - 1) * limit;
 
 	const orden = queryParams_.orden || "asc";
@@ -435,30 +468,30 @@ export async function getActivosDisponibles(queryParams_: {
 		proveedores: proveedorId,
 	} = queryParams_;
 
-	const filters = [
-		eq(activos.activo, 1),
-		eq(activos.estado, "Disponible"),
+	const filtros = [
+		isNull(activos.deleted_at),
+		eq(activos.estado, "disponible"),
 		...(search ? [like(activos.nombre, `%${search}%`)] : []),
 		...(tipo ? [eq(activos.tipo_id, Number(tipo))] : []),
 		...(ubicacion ? [eq(activos.ubicacion_id, Number(ubicacion))] : []),
 		...(proveedorId ? [eq(activos.proveedor_id, Number(proveedorId))] : []),
 	];
 
-	const rows = await db
+	const filas = await db
 		.select({
 			id: activos.id,
 			activo: activos.nombre,
-			tipo_activo: tipos.nombre,
+			tipo_activo: tiposActivo.nombre,
 			estado_activo: activos.estado,
 			proveedor: proveedores.nombre,
 			ubicacion: ubicaciones.nombre,
 			foto_url: activos.foto_url,
 		})
 		.from(activos)
-		.leftJoin(tipos, eq(activos.tipo_id, tipos.id))
+		.leftJoin(tiposActivo, eq(activos.tipo_id, tiposActivo.id))
 		.leftJoin(proveedores, eq(activos.proveedor_id, proveedores.id))
 		.leftJoin(ubicaciones, eq(activos.ubicacion_id, ubicaciones.id))
-		.where(and(...filters))
+		.where(and(...filtros))
 		.orderBy(safeOrder === "DESC" ? desc(activos.id) : asc(activos.id))
 		.limit(limit)
 		.offset(offset);
@@ -466,15 +499,15 @@ export async function getActivosDisponibles(queryParams_: {
 	const [totalResult] = await db
 		.select({ total: count() })
 		.from(activos)
-		.leftJoin(tipos, eq(activos.tipo_id, tipos.id))
-		.leftJoin(proveedores, eq(activos.proveedor_id, proveedores.id))
-		.leftJoin(ubicaciones, eq(activos.ubicacion_id, ubicaciones.id))
-		.where(and(...filters));
+		.where(and(...filtros));
 
 	const total = Number(totalResult.total);
 
 	return {
-		data: rows,
+		data: filas.map((fila) => ({
+			...fila,
+			estado_activo: etiquetaEstado(fila.estado_activo),
+		})),
 		pagination: {
 			page,
 			limit,
@@ -486,72 +519,57 @@ export async function getActivosDisponibles(queryParams_: {
 
 export async function obtenerDatosAuxiliares(activoId?: string) {
 	if (activoId && Number.isNaN(Number(activoId))) {
-		throw new Error("El ID proporcionado no es válido");
+		throw new ErrorHttp(400, "El ID proporcionado no es válido");
 	}
 
-	let usuariosData: { id: number; nombre: string }[];
-	try {
-		usuariosData = await db
-			.select({ id: usuarios.id, nombre: usuarios.nombre })
-			.from(usuarios);
-	} catch {
-		throw new Error("Error al obtener los usuarios");
-	}
+	const personasData = await db
+		.select({ id: personas.id, nombre: personas.nombre })
+		.from(personas)
+		.where(isNull(personas.deleted_at));
 
-	let tiposActivos: { id: number; nombre: string }[];
-	try {
-		tiposActivos = await db
-			.select({ id: tipos.id, nombre: tipos.nombre })
-			.from(tipos);
-	} catch {
-		throw new Error("Error al obtener los tipos de activos");
-	}
+	const tiposActivos = await db
+		.select({ id: tiposActivo.id, nombre: tiposActivo.nombre })
+		.from(tiposActivo);
 
-	let proveedoresData: { id: number; nombre: string }[];
-	try {
-		proveedoresData = await db
-			.select({ id: proveedores.id, nombre: proveedores.nombre })
-			.from(proveedores);
-	} catch {
-		throw new Error("Error al obtener los proveedores");
-	}
+	const proveedoresData = await db
+		.select({ id: proveedores.id, nombre: proveedores.nombre })
+		.from(proveedores);
 
-	let ubicacionesData: { id: number; nombre: string }[];
-	try {
-		ubicacionesData = await db
-			.select({ id: ubicaciones.id, nombre: ubicaciones.nombre })
-			.from(ubicaciones);
-	} catch {
-		throw new Error("Error al obtener las ubicaciones");
-	}
+	const ubicacionesData = await db
+		.select({ id: ubicaciones.id, nombre: ubicaciones.nombre })
+		.from(ubicaciones);
 
 	let nombreActivo: string | null = null;
 	let fotoActivo: string | null = null;
 
 	if (activoId) {
-		try {
-			const [activo] = await db
-				.select({ nombre: activos.nombre, foto_url: activos.foto_url })
-				.from(activos)
-				.where(eq(activos.id, Number(activoId)));
+		const [activo] = await db
+			.select({ nombre: activos.nombre, foto_url: activos.foto_url })
+			.from(activos)
+			.where(eq(activos.id, Number(activoId)))
+			.limit(1);
 
-			if (!activo) {
-				throw new Error("Activo no encontrado");
-			}
-
-			nombreActivo = activo.nombre;
-			fotoActivo = activo.foto_url;
-		} catch {
-			throw new Error("Error al obtener el activo");
+		if (!activo) {
+			throw new ErrorHttp(404, "Activo no encontrado");
 		}
+
+		nombreActivo = activo.nombre;
+		fotoActivo = activo.foto_url;
 	}
 
 	return {
-		usuarios: usuariosData,
+		usuarios: personasData,
 		tiposActivos,
 		proveedores: proveedoresData,
 		ubicaciones: ubicacionesData,
 		nombre: nombreActivo,
 		foto_url: fotoActivo,
 	};
+}
+
+// Departamentos disponibles (utilidad para catálogos)
+export async function getDepartamentos() {
+	return db
+		.select({ id: departamentos.id, nombre: departamentos.nombre })
+		.from(departamentos);
 }

@@ -7,93 +7,37 @@ import {
 	getGarantias,
 	updateGarantia,
 } from "../services/garantiasService.js";
-// Logger
-import { logger } from "../services/logger.js";
 
 // Controller: lista paginada de garantías
 export const listarGarantias = async (req: Request, res: Response) => {
-	try {
-		const page = parseInt(req.query.page as string, 10) || 1;
-		const limit = parseInt(req.query.limit as string, 10) || 10;
-		const result = await getGarantias(page, limit);
-		res.json(result);
-	} catch (error: unknown) {
-		logger.error("[ERROR GARANTIAS]:", (error as Error).message);
-		res.status(500).json({ error: "Error al obtener las garantías." });
-	}
+	const { page, limit } = req.validatedQuery as { page: number; limit: number };
+	const result = await getGarantias(page, limit);
+	res.json(result);
 };
 
 // Controller: registra nueva garantía
 export const crearGarantia = async (req: Request, res: Response) => {
-	try {
-		const input = req.validated as {
-			activo_id: number;
-			proveedor_garantia_id: number;
-			nombre_garantia: string;
-			fecha_inicio: string;
-			fecha_fin: string;
-			costo?: number;
-			condiciones?: string;
-			estado: string;
-			descripcion?: string;
-		};
-		const result = await createGarantia(input, req.user?.id);
-		res
-			.status(201)
-			.json({ data: result, message: "Garantía registrada correctamente" });
-	} catch (error: unknown) {
-		const message = (error as Error).message;
-		logger.error("[ERROR GARANTIAS]:", message);
-		if (
-			message.toLowerCase().includes("no existe") ||
-			message.toLowerCase().includes("no válido") ||
-			message.toLowerCase().includes("posterior")
-		) {
-			res.status(400).json({ error: message });
-			return;
-		}
-		res.status(500).json({ error: "Error al registrar la garantía." });
-	}
+	const result = await createGarantia(
+		req.validated as Parameters<typeof createGarantia>[0],
+		req.user?.id,
+	);
+	res
+		.status(201)
+		.json({ data: result, message: "Garantía registrada correctamente" });
 };
 
 // Controller: actualiza garantía existente
 export const actualizarGarantia = async (req: Request, res: Response) => {
-	try {
-		const id = req.params.id as string;
-		const input = req.validated as {
-			nombre_garantia?: string;
-			estado?: string;
-			fecha_fin?: string;
-			descripcion?: string;
-			proveedor_garantia_id?: number;
-			costo?: number;
-			condiciones?: string;
-		};
-		const result = await updateGarantia(id, input);
-		res.json({ data: result, message: "Garantía actualizada correctamente" });
-	} catch (error: unknown) {
-		const message = (error as Error).message;
-		logger.error("[ERROR GARANTIAS]:", message);
-		if (
-			message.toLowerCase().includes("no existe") ||
-			message.toLowerCase().includes("no válido") ||
-			message.toLowerCase().includes("posterior")
-		) {
-			res.status(400).json({ error: message });
-			return;
-		}
-		res.status(500).json({ error: "Error al actualizar la garantía." });
-	}
+	const result = await updateGarantia(
+		req.params.id as string,
+		req.validated as Parameters<typeof updateGarantia>[1],
+		req.user?.id,
+	);
+	res.json({ data: result, message: "Garantía actualizada correctamente" });
 };
 
-// Controller: elimina garantía
+// Controller: elimina garantía (baja lógica)
 export const eliminarGarantia = async (req: Request, res: Response) => {
-	try {
-		const id = req.params.id as string;
-		await deleteGarantia(id);
-		res.json({ data: null, message: "Garantía eliminada físicamente" });
-	} catch (error: unknown) {
-		logger.error("[ERROR GARANTIAS]:", (error as Error).message);
-		res.status(500).json({ error: "Error al eliminar la garantía." });
-	}
+	await deleteGarantia(req.params.id as string, req.user?.id);
+	res.json({ data: null, message: "Garantía eliminada correctamente" });
 };

@@ -1,55 +1,89 @@
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, isNull, ne, sql } from "drizzle-orm";
 import db from "../config/db.js";
-import {
-	activos,
-	garantias,
-	historial,
-	proveedoresgarantia,
-} from "../db/schema.js";
+import { activos, garantias, proveedores } from "../db/schema.js";
+import { ErrorHttp } from "./errors.js";
+import { registrarEvento } from "./eventosService.js";
+import { codigoGarantia, estadoGarantia } from "./presentacion.js";
+
+// Verifica que no exista otra garantía vigente solapada para el activo
+async function validarSolapamiento(
+	activoId: number,
+	fechaInicio: string,
+	fechaFin: string,
+	excluirId?: number,
+) {
+	const condiciones = [
+		eq(garantias.activo_id, activoId),
+		isNull(garantias.deleted_at),
+		sql`${garantias.fecha_inicio} <= ${fechaFin}`,
+		sql`${garantias.fecha_fin} >= ${fechaInicio}`,
+	];
+
+	if (excluirId) condiciones.push(ne(garantias.id, excluirId));
+
+	const [solapada] = await db
+		.select({ id: garantias.id })
+		.from(garantias)
+		.where(and(...condiciones))
+		.limit(1);
+
+	if (solapada) {
+		throw new ErrorHttp(
+			409,
+			"El activo ya tiene una garantía que se solapa con ese periodo.",
+		);
+	}
+}
 
 // Consultas de garantías
 
 export async function getGarantias(page: number, limit: number) {
-	// Validación de parámetros de paginación
 	if (Number.isNaN(page) || Number.isNaN(limit)) {
-		throw new Error("Los parámetros de paginación deben ser números válidos.");
+		throw new ErrorHttp(
+			400,
+			"Los parámetros de paginación deben ser números válidos.",
+		);
 	}
 
 	const safeLimit = Math.min(limit, 100);
-
 	const offset = (page - 1) * safeLimit;
 
-	const results = await db
+	const filas = await db
 		.select({
 			id: garantias.id,
 			activo: activos.nombre,
-			proveedor_garantia: proveedoresgarantia.nombre,
-			fecha_inicio: sql<string>`DATE_FORMAT(${garantias.fecha_inicio}, '%Y-%m-%d')`,
-			fecha_fin: sql<string>`DATE_FORMAT(${garantias.fecha_fin}, '%Y-%m-%d')`,
+			proveedor_garantia: proveedores.nombre,
+			proveedor_garantia_id: garantias.proveedor_id,
+			fecha_inicio: garantias.fecha_inicio,
+			fecha_fin: garantias.fecha_fin,
 			costo: garantias.costo,
 			condiciones: garantias.condiciones,
-			estado: garantias.estado,
 			descripcion: garantias.descripcion,
-			nombre_garantia: garantias.nombre_garantia,
+			nombre_garantia: garantias.nombre,
 		})
 		.from(garantias)
 		.innerJoin(activos, eq(garantias.activo_id, activos.id))
-		.innerJoin(
-			proveedoresgarantia,
-			eq(garantias.proveedor_garantia_id, proveedoresgarantia.id),
-		)
-		.where(eq(garantias.activo, 1))
+		.innerJoin(proveedores, eq(garantias.proveedor_id, proveedores.id))
+		.where(isNull(garantias.deleted_at))
 		.limit(safeLimit)
 		.offset(offset);
 
 	const [countResult] = await db
 		.select({ total: count() })
 		.from(garantias)
-		.where(eq(garantias.activo, 1));
+		.where(isNull(garantias.deleted_at));
+
 	const total = countResult.total;
 
 	return {
-		data: results,
+		data: filas.map((fila) => {
+			const estado = estadoGarantia(fila.fecha_fin);
+			return {
+				...fila,
+				estado,
+				estado_codigo: codigoGarantia(estado),
+			};
+		}),
 		pagination: {
 			page,
 			limit: safeLimit,
@@ -70,7 +104,7 @@ export async function createGarantia(
 		fecha_fin: string;
 		costo?: number;
 		condiciones?: string;
-		estado: string;
+		estado?: string;
 		descripcion?: string;
 	},
 	usuarioResponsableId?: number,
@@ -83,70 +117,76 @@ export async function createGarantia(
 		fecha_fin,
 		costo,
 		condiciones,
-		estado,
 		descripcion,
 	} = input;
 
-	// Valida que la fecha de fin sea posterior a la de inicio
-	const fechaInicioValida = new Date(fecha_inicio);
-	const fechaFinValida = new Date(fecha_fin);
-
-	if (fechaFinValida <= fechaInicioValida) {
-		throw new Error("La fecha de fin debe ser posterior a la fecha de inicio.");
+	if (new Date(fecha_fin) <= new Date(fecha_inicio)) {
+		throw new ErrorHttp(
+			400,
+			"La fecha de fin debe ser posterior a la fecha de inicio.",
+		);
 	}
-
-	// Verifica que el activo exista y esté activo
-	const activo = await db
-		.select({ id: activos.id, nombre: activos.nombre })
-		.from(activos)
-		.where(and(eq(activos.id, activo_id), eq(activos.activo, 1)));
-
-	if (activo.length === 0) {
-		throw new Error("El activo no existe o está dado de baja.");
-	}
-
-	const proveedor = await db
-		.select({ id: proveedoresgarantia.id })
-		.from(proveedoresgarantia)
-		.where(eq(proveedoresgarantia.id, proveedor_garantia_id));
-
-	if (proveedor.length === 0) {
-		throw new Error("El proveedor de garantía no existe.");
-	}
-
-	const result = await db.insert(garantias).values({
-		activo_id,
-		proveedor_garantia_id,
-		nombre_garantia,
-		fecha_inicio: new Date(fecha_inicio),
-		fecha_fin: new Date(fecha_fin),
-		costo: costo != null ? String(costo) : null,
-		condiciones: condiciones || null,
-		estado: estado as "Vigente" | "Por vencer" | "Vencida",
-		descripcion: descripcion || null,
-	});
-
-	const nombreActivo = activo[0].nombre;
 
 	if (!usuarioResponsableId) {
-		throw new Error("Acceso no autorizado.");
+		throw new ErrorHttp(403, "Acceso no autorizado.");
 	}
 
-	try {
-		await db.insert(historial).values({
-			activo_id,
-			accion: "Garantía registrada",
-			usuario_responsable: usuarioResponsableId,
-			usuario_asignado: null,
-			ubicacion_nueva: null,
-			detalles: `Se registró una nueva garantía: ${nombre_garantia} para el activo "${nombreActivo}".`,
-		});
-	} catch {
-		throw new Error("Error al registrar la acción en el historial.");
+	const [activo] = await db
+		.select({ id: activos.id, nombre: activos.nombre })
+		.from(activos)
+		.where(and(eq(activos.id, activo_id), isNull(activos.deleted_at)))
+		.limit(1);
+
+	if (!activo) {
+		throw new ErrorHttp(404, "El activo no existe o está dado de baja.");
 	}
+
+	const [proveedor] = await db
+		.select({ id: proveedores.id })
+		.from(proveedores)
+		.where(eq(proveedores.id, proveedor_garantia_id))
+		.limit(1);
+
+	if (!proveedor) {
+		throw new ErrorHttp(404, "El proveedor de garantía no existe.");
+	}
+
+	await validarSolapamiento(activo_id, fecha_inicio, fecha_fin);
+
+	const id = await db.transaction(async (tx) => {
+		const [creada] = await tx
+			.insert(garantias)
+			.values({
+				activo_id,
+				proveedor_id: proveedor_garantia_id,
+				nombre: nombre_garantia,
+				fecha_inicio,
+				fecha_fin,
+				costo: costo != null ? String(costo) : null,
+				condiciones: condiciones || null,
+				descripcion: descripcion || null,
+			})
+			.$returningId();
+
+		await registrarEvento(tx, {
+			entidad: "garantia",
+			entidad_id: creada.id,
+			accion: "garantia.creada",
+			actor_id: usuarioResponsableId,
+			nuevos: {
+				activo_id,
+				nombre_garantia,
+				fecha_inicio,
+				fecha_fin,
+				detalles: `Se registró la garantía "${nombre_garantia}" para el activo "${activo.nombre}".`,
+			},
+		});
+
+		return creada.id;
+	});
 
 	return {
-		id: result[0].insertId,
+		id,
 		activo_id,
 		proveedor_garantia_id,
 		nombre_garantia,
@@ -154,7 +194,8 @@ export async function createGarantia(
 		fecha_fin,
 		costo,
 		condiciones,
-		estado,
+		estado: estadoGarantia(fecha_fin),
+		estado_codigo: codigoGarantia(estadoGarantia(fecha_fin)),
 		descripcion,
 	};
 }
@@ -172,10 +213,10 @@ export async function updateGarantia(
 		costo?: number;
 		condiciones?: string;
 	},
+	usuarioResponsableId?: number,
 ) {
 	const {
 		nombre_garantia,
-		estado,
 		fecha_fin,
 		descripcion,
 		proveedor_garantia_id,
@@ -183,94 +224,116 @@ export async function updateGarantia(
 		condiciones,
 	} = input;
 
-	// Verifica que la garantía exista antes de actualizarla
-	const garantiaExistente = await db
+	const [existente] = await db
 		.select()
 		.from(garantias)
-		.where(eq(garantias.id, Number(id)));
-	if (garantiaExistente.length === 0) {
-		throw new Error("La garantía no existe.");
+		.where(eq(garantias.id, Number(id)))
+		.limit(1);
+
+	if (!existente) {
+		throw new ErrorHttp(404, "La garantía no existe.");
 	}
 
-	const activo = await db
-		.select({ nombre: activos.nombre })
-		.from(activos)
-		.where(eq(activos.id, garantiaExistente[0].activo_id));
-	const _nombreActivo = activo[0]?.nombre || "Activo desconocido";
-
-	// Valida el estado contra valores permitidos
-	const estadosPermitidos = ["Vigente", "Por vencer", "Vencida"];
-	if (estado && !estadosPermitidos.includes(estado)) {
-		throw new Error("El estado proporcionado no es válido.");
-	}
-
-	// Valida formato y que la fecha de fin sea futura
 	if (fecha_fin) {
 		const fechaFinValida = new Date(fecha_fin);
 		if (Number.isNaN(fechaFinValida.getTime())) {
-			throw new Error("El formato de la fecha de fin es inválido.");
+			throw new ErrorHttp(400, "El formato de la fecha de fin es inválido.");
 		}
-
-		const fechaActual = new Date();
-		if (fechaFinValida <= fechaActual) {
-			throw new Error("La fecha de fin debe ser posterior a la fecha actual.");
+		if (fechaFinValida <= new Date(existente.fecha_inicio)) {
+			throw new ErrorHttp(
+				400,
+				"La fecha de fin debe ser posterior a la de inicio.",
+			);
 		}
+		await validarSolapamiento(
+			existente.activo_id,
+			existente.fecha_inicio,
+			fecha_fin,
+			existente.id,
+		);
 	}
 
-	const values: Record<string, unknown> = {};
-	if (nombre_garantia) values.nombre_garantia = nombre_garantia;
-	if (estado) values.estado = estado;
-	if (fecha_fin) values.fecha_fin = fecha_fin;
-	if (descripcion !== undefined) values.descripcion = descripcion || null;
-	if (proveedor_garantia_id)
-		values.proveedor_garantia_id = proveedor_garantia_id;
-	if (costo !== undefined) values.costo = costo || null;
-	if (condiciones !== undefined) values.condiciones = condiciones || null;
+	const valores: Partial<typeof garantias.$inferInsert> = {};
+	if (nombre_garantia) valores.nombre = nombre_garantia;
+	if (fecha_fin) valores.fecha_fin = fecha_fin;
+	if (descripcion !== undefined) valores.descripcion = descripcion || null;
+	if (proveedor_garantia_id) valores.proveedor_id = proveedor_garantia_id;
+	if (costo !== undefined) valores.costo = costo != null ? String(costo) : null;
+	if (condiciones !== undefined) valores.condiciones = condiciones || null;
 
-	if (Object.keys(values).length === 0) {
-		throw new Error("No se proporcionaron campos para actualizar.");
+	if (Object.keys(valores).length === 0) {
+		throw new ErrorHttp(400, "No se proporcionaron campos para actualizar.");
 	}
 
-	await db
-		.update(garantias)
-		.set(values)
-		.where(eq(garantias.id, Number(id)));
+	await db.transaction(async (tx) => {
+		await tx
+			.update(garantias)
+			.set(valores)
+			.where(eq(garantias.id, existente.id));
+
+		await registrarEvento(tx, {
+			entidad: "garantia",
+			entidad_id: existente.id,
+			accion: "garantia.actualizada",
+			actor_id: usuarioResponsableId ?? null,
+			anteriores: {
+				nombre: existente.nombre,
+				fecha_fin: existente.fecha_fin,
+			},
+			nuevos: {
+				nombre: nombre_garantia ?? existente.nombre,
+				fecha_fin: fecha_fin ?? existente.fecha_fin,
+			},
+		});
+	});
 
 	return {
-		id: Number(id),
-		activo_id: garantiaExistente[0].activo_id,
-		proveedor_garantia_id:
-			proveedor_garantia_id || garantiaExistente[0].proveedor_garantia_id,
-		nombre_garantia: nombre_garantia || garantiaExistente[0].nombre_garantia,
-		fecha_inicio: garantiaExistente[0].fecha_inicio,
-		fecha_fin: fecha_fin || garantiaExistente[0].fecha_fin,
-		costo: costo !== undefined ? costo : garantiaExistente[0].costo,
+		id: existente.id,
+		activo_id: existente.activo_id,
+		proveedor_garantia_id: proveedor_garantia_id || existente.proveedor_id,
+		nombre_garantia: nombre_garantia || existente.nombre,
+		fecha_inicio: existente.fecha_inicio,
+		fecha_fin: fecha_fin || existente.fecha_fin,
+		costo: costo !== undefined ? costo : existente.costo,
 		condiciones:
-			condiciones !== undefined
-				? condiciones
-				: garantiaExistente[0].condiciones,
-		estado: estado || garantiaExistente[0].estado,
+			condiciones !== undefined ? condiciones : existente.condiciones,
+		estado: estadoGarantia(fecha_fin || existente.fecha_fin),
+		estado_codigo: codigoGarantia(
+			estadoGarantia(fecha_fin || existente.fecha_fin),
+		),
 		descripcion:
-			descripcion !== undefined
-				? descripcion
-				: garantiaExistente[0].descripcion,
+			descripcion !== undefined ? descripcion : existente.descripcion,
 	};
 }
 
-// Eliminación de garantías
+// Eliminación lógica de garantías
 
-export async function deleteGarantia(id: string) {
-	// Verifica que la garantía exista antes de eliminar
-	const garantia = await db
-		.select({ id: garantias.id })
+export async function deleteGarantia(
+	id: string,
+	usuarioResponsableId?: number,
+) {
+	const [existente] = await db
+		.select({ id: garantias.id, activo_id: garantias.activo_id })
 		.from(garantias)
-		.where(eq(garantias.id, Number(id)));
-	if (garantia.length === 0) {
-		throw new Error("La garantía no existe.");
+		.where(and(eq(garantias.id, Number(id)), isNull(garantias.deleted_at)))
+		.limit(1);
+
+	if (!existente) {
+		throw new ErrorHttp(404, "La garantía no existe.");
 	}
 
-	await db
-		.update(garantias)
-		.set({ activo: 0 })
-		.where(eq(garantias.id, Number(id)));
+	await db.transaction(async (tx) => {
+		await tx
+			.update(garantias)
+			.set({ deleted_at: new Date() })
+			.where(eq(garantias.id, existente.id));
+
+		await registrarEvento(tx, {
+			entidad: "garantia",
+			entidad_id: existente.id,
+			accion: "garantia.eliminada",
+			actor_id: usuarioResponsableId ?? null,
+			nuevos: { activo_id: existente.activo_id },
+		});
+	});
 }

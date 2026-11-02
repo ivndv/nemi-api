@@ -1,41 +1,46 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import db from "../config/db.js";
-import { activos, asignaciones, garantias } from "../db/schema.js";
+import {
+	activos,
+	asignaciones,
+	configuracion,
+	garantias,
+	licencias,
+} from "../db/schema.js";
+import { fechaHoyEnZona } from "./zonaHoraria.js";
 
 // Resumen general del dashboard
 
 export async function getResumen() {
-	// Cuenta total de activos agrupados por estado
 	const [result] = await db
 		.select({
-			total_activos: sql<number>`COUNT(*)`,
-			activos_disponibles: sql<number>`SUM(CASE WHEN estado = 'Disponible' THEN 1 ELSE 0 END)`,
-			activos_asignados: sql<number>`SUM(CASE WHEN estado = 'Asignado' THEN 1 ELSE 0 END)`,
-			activos_en_mantenimiento: sql<number>`SUM(CASE WHEN estado = 'En mantenimiento' THEN 1 ELSE 0 END)`,
-			activos_dados_de_baja: sql<number>`SUM(CASE WHEN estado = 'Dado de baja' THEN 1 ELSE 0 END)`,
+			total_activos: sql<string>`COUNT(*)`,
+			activos_disponibles: sql<string>`SUM(CASE WHEN estado = 'disponible' THEN 1 ELSE 0 END)`,
+			activos_asignados: sql<string>`SUM(CASE WHEN estado = 'asignado' THEN 1 ELSE 0 END)`,
+			activos_en_mantenimiento: sql<string>`SUM(CASE WHEN estado = 'mantenimiento' THEN 1 ELSE 0 END)`,
 		})
 		.from(activos)
-		.where(eq(activos.activo, 1));
+		.where(isNull(activos.deleted_at));
 
-	// Sin activos registrados — devuelve ceros
-	if (result.total_activos === 0) {
-		return {
-			total_activos: 0,
-			activos_disponibles: 0,
-			activos_asignados: 0,
-			activos_en_mantenimiento: 0,
-			activos_dados_de_baja: 0,
-			tendencia_mensual: { labels: [], data: [] },
-			ano_tendencia: new Date().getFullYear(),
-		};
-	}
+	const [bajas] = await db
+		.select({ total: sql<string>`COUNT(*)` })
+		.from(activos)
+		.where(sql`${activos.deleted_at} IS NOT NULL`);
 
-	// Tendencia mensual de registros en el último año
+	const resumen = {
+		total_activos: Number(result?.total_activos ?? 0),
+		activos_disponibles: Number(result?.activos_disponibles ?? 0),
+		activos_asignados: Number(result?.activos_asignados ?? 0),
+		activos_en_mantenimiento: Number(result?.activos_en_mantenimiento ?? 0),
+		activos_dados_de_baja: Number(bajas?.total ?? 0),
+	};
+
+	// Tendencia mensual de altas en el último año
 	const fechaActual = new Date();
 	const fechaHaceUnAno = new Date(fechaActual);
 	fechaHaceUnAno.setFullYear(fechaActual.getFullYear() - 1);
 
-	const tendenciaMensualResult = (await db.execute(sql`
+	const [tendencia] = await db.execute(sql`
     WITH meses AS (
       SELECT 'Ene' AS mes, 1 AS numero UNION ALL
       SELECT 'Feb', 2 UNION ALL
@@ -50,96 +55,102 @@ export async function getResumen() {
       SELECT 'Nov', 11 UNION ALL
       SELECT 'Dic', 12
     )
-    SELECT 
+    SELECT
       m.mes,
       COALESCE(COUNT(a.id), 0) AS cantidad,
-      YEAR(a.fecha_registro) AS ano
+      YEAR(a.created_at) AS ano
     FROM meses m
-    LEFT JOIN activos a 
-      ON MONTH(a.fecha_registro) = m.numero 
-      AND a.fecha_registro >= ${fechaHaceUnAno} AND a.fecha_registro <= ${fechaActual}
-      AND a.activo = 1
-    GROUP BY m.mes, m.numero, YEAR(a.fecha_registro)
-    ORDER BY YEAR(a.fecha_registro), m.numero;
-  `)) as unknown as Array<{ mes: string; cantidad: number; ano: number }>;
+    LEFT JOIN activos a
+      ON MONTH(a.created_at) = m.numero
+      AND a.created_at >= ${fechaHaceUnAno} AND a.created_at <= ${fechaActual}
+      AND a.deleted_at IS NULL
+    GROUP BY m.mes, m.numero, YEAR(a.created_at)
+    ORDER BY YEAR(a.created_at), m.numero;
+  `);
 
-	const ano =
-		tendenciaMensualResult.length > 0
-			? tendenciaMensualResult[0].ano
-			: new Date().getFullYear();
+	const filas = tendencia as unknown as Array<{
+		mes: string;
+		cantidad: number;
+		ano: number | null;
+	}>;
 
 	return {
-		total_activos: result.total_activos,
-		activos_disponibles: result.activos_disponibles,
-		activos_asignados: result.activos_asignados,
-		activos_en_mantenimiento: result.activos_en_mantenimiento,
-		activos_dados_de_baja: result.activos_dados_de_baja,
+		...resumen,
 		tendencia_mensual: {
-			labels: (tendenciaMensualResult as Array<{ mes: string }>).map(
-				(row) => row.mes,
-			),
-			data: (tendenciaMensualResult as Array<{ cantidad: number }>).map(
-				(row) => row.cantidad,
-			),
+			labels: filas.map((fila) => fila.mes),
+			data: filas.map((fila) => Number(fila.cantidad)),
 		},
-		ano_tendencia: ano,
+		ano_tendencia: filas[0]?.ano ?? new Date().getFullYear(),
 	};
 }
 
 // Alertas del dashboard
 
 export async function getAlertas() {
-	// Licencias por vencer en los próximos 30 días
-	const [licenciasProximas] = await db
+	// Días de anticipación configurados
+	const [config] = await db
 		.select({
-			count: sql<number>`COUNT(*)`,
+			licencia: configuracion.dias_alerta_licencia,
+			garantia: configuracion.dias_alerta_garantia,
+			devolucion: configuracion.dias_alerta_devolucion,
 		})
-		.from(activos)
+		.from(configuracion)
+		.where(eq(configuracion.id, 1))
+		.limit(1);
+
+	const diasLicencia = config?.licencia ?? 30;
+	const diasGarantia = config?.garantia ?? 30;
+	const diasDevolucion = config?.devolucion ?? 7;
+	const hoy = fechaHoyEnZona();
+
+	// Licencias cuya renovación vence pronto
+	const [licenciasProximas] = await db
+		.select({ count: sql<string>`COUNT(*)` })
+		.from(licencias)
+		.innerJoin(activos, eq(licencias.activo_id, activos.id))
 		.where(
 			and(
-				eq(activos.activo, 1),
-				sql`fecha_vencimiento_licencia IS NOT NULL AND fecha_vencimiento_licencia BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)`,
+				isNull(activos.deleted_at),
+				sql`${licencias.fecha_renovacion} IS NOT NULL`,
+				sql`${licencias.fecha_renovacion} BETWEEN ${hoy} AND DATE_ADD(${hoy}, INTERVAL ${diasLicencia} DAY)`,
 			),
 		);
 
-	// Garantías próximas a expirar en los próximos 30 días
+	// Garantías próximas a expirar
 	const [garantiasProximas] = await db
-		.select({
-			count: sql<number>`COUNT(*)`,
-		})
+		.select({ count: sql<string>`COUNT(*)` })
 		.from(garantias)
 		.where(
 			and(
-				eq(garantias.activo, 1),
-				sql`fecha_fin BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)`,
+				isNull(garantias.deleted_at),
+				sql`${garantias.fecha_fin} BETWEEN ${hoy} AND DATE_ADD(${hoy}, INTERVAL ${diasGarantia} DAY)`,
 			),
 		);
 
-	// Activos actualmente en mantenimiento
+	// Activos en mantenimiento
 	const [activosMantenimiento] = await db
-		.select({
-			count: sql<number>`COUNT(*)`,
-		})
+		.select({ count: sql<string>`COUNT(*)` })
 		.from(activos)
-		.where(and(eq(activos.activo, 1), eq(activos.estado, "En mantenimiento")));
+		.where(
+			and(isNull(activos.deleted_at), eq(activos.estado, "mantenimiento")),
+		);
 
-	// Asignaciones con fecha de devolución próxima
+	// Asignaciones con devolución pactada próxima y aún activas
 	const [activosDevolver] = await db
-		.select({
-			count: sql<number>`COUNT(*)`,
-		})
+		.select({ count: sql<string>`COUNT(*)` })
 		.from(asignaciones)
 		.where(
 			and(
-				eq(asignaciones.activo, 1),
-				sql`fecha_devolucion BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)`,
+				isNull(asignaciones.fecha_devolucion_real),
+				sql`${asignaciones.fecha_devolucion_pactada} IS NOT NULL`,
+				sql`${asignaciones.fecha_devolucion_pactada} BETWEEN ${hoy} AND DATE_ADD(${hoy}, INTERVAL ${diasDevolucion} DAY)`,
 			),
 		);
 
 	return {
-		licencias_proximas_a_vencer: licenciasProximas.count || 0,
-		garantias_proximas_a_expirar: garantiasProximas.count || 0,
-		activos_en_mantenimiento: activosMantenimiento.count || 0,
-		activos_proximos_a_devolver: activosDevolver.count || 0,
+		licencias_proximas_a_vencer: Number(licenciasProximas?.count ?? 0),
+		garantias_proximas_a_expirar: Number(garantiasProximas?.count ?? 0),
+		activos_en_mantenimiento: Number(activosMantenimiento?.count ?? 0),
+		activos_proximos_a_devolver: Number(activosDevolver?.count ?? 0),
 	};
 }

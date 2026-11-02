@@ -1,8 +1,14 @@
-import { and, asc, count, desc, eq, like, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, like, or, sql } from "drizzle-orm";
 import db from "../config/db.js";
-import { activos, historial, usuarios } from "../db/schema.js";
+import { acciones, activos, eventos, personas } from "../db/schema.js";
+import { ErrorHttp } from "./errors.js";
 
-// Consultas de historial
+// Extrae el detalle legible guardado en el JSON del evento
+const detalleEvento = sql<
+	string | null
+>`JSON_UNQUOTE(JSON_EXTRACT(${eventos.datos_nuevos}, '$.detalles'))`;
+
+// Consultas de historial (eventos)
 
 export async function getHistorialActivo(
 	id: number,
@@ -13,68 +19,72 @@ export async function getHistorialActivo(
 	accion: string,
 	usuario_responsable: string,
 ) {
-	// Verifica que el activo exista antes de consultar su historial
 	const [activo] = await db
 		.select({ id: activos.id })
 		.from(activos)
 		.where(eq(activos.id, id))
 		.limit(1);
+
 	if (!activo) {
-		throw new Error(`No se encontró ningún activo con el ID ${id}.`);
+		throw new ErrorHttp(404, `No se encontró ningún activo con el ID ${id}.`);
 	}
 
-	// Paginación, orden y filtros dinámicos
 	const safeLimit = Math.min(limit, 100);
 	const offset = (page - 1) * safeLimit;
 
-	const whereConditions = [eq(historial.activo_id, id)];
+	const condiciones = [
+		eq(eventos.entidad, "activo"),
+		eq(eventos.entidad_id, id),
+	];
 
-	// Filtro por texto en acción o detalles
 	if (search) {
-		const searchCondition = or(
-			like(historial.accion, `%${search}%`),
-			like(historial.detalles, `%${search}%`),
+		const condicion = or(
+			like(acciones.nombre, `%${search}%`),
+			sql`JSON_EXTRACT(${eventos.datos_nuevos}, '$.detalles') LIKE ${`%${search}%`}`,
 		);
-		if (searchCondition) {
-			whereConditions.push(searchCondition);
-		}
+		if (condicion) condiciones.push(condicion);
 	}
 
-	// Filtro por tipo de acción
 	if (accion) {
-		whereConditions.push(eq(historial.accion, accion));
-	}
-
-	// Filtro por usuario responsable
-	if (usuario_responsable) {
-		whereConditions.push(
-			eq(historial.usuario_responsable, Number(usuario_responsable)),
+		const condicion = or(
+			eq(acciones.slug, accion),
+			eq(acciones.nombre, accion),
 		);
+		if (condicion) condiciones.push(condicion);
 	}
 
-	const rows = await db
+	if (usuario_responsable) {
+		condiciones.push(eq(eventos.actor_id, Number(usuario_responsable)));
+	}
+
+	const filas = await db
 		.select({
-			id: historial.id,
-			accion: historial.accion,
-			fecha: historial.fecha,
-			usuario_responsable: usuarios.nombre,
-			detalles: historial.detalles,
+			id: eventos.id,
+			accion: acciones.nombre,
+			slug: acciones.slug,
+			fecha: eventos.created_at,
+			usuario_responsable: personas.nombre,
+			detalles: detalleEvento,
 		})
-		.from(historial)
-		.innerJoin(usuarios, eq(historial.usuario_responsable, usuarios.id))
-		.where(and(...whereConditions))
-		.orderBy(orden === "desc" ? desc(historial.fecha) : asc(historial.fecha))
+		.from(eventos)
+		.innerJoin(acciones, eq(eventos.accion_id, acciones.id))
+		.leftJoin(personas, eq(eventos.actor_id, personas.id))
+		.where(and(...condiciones))
+		.orderBy(
+			orden === "desc" ? desc(eventos.created_at) : asc(eventos.created_at),
+		)
 		.limit(safeLimit)
 		.offset(offset);
 
 	const [totalResult] = await db
 		.select({ total: count() })
-		.from(historial)
-		.innerJoin(usuarios, eq(historial.usuario_responsable, usuarios.id))
-		.where(and(...whereConditions));
+		.from(eventos)
+		.innerJoin(acciones, eq(eventos.accion_id, acciones.id))
+		.leftJoin(personas, eq(eventos.actor_id, personas.id))
+		.where(and(...condiciones));
 
 	return {
-		data: rows,
+		data: filas,
 		pagination: {
 			page,
 			limit: safeLimit,
@@ -84,37 +94,31 @@ export async function getHistorialActivo(
 	};
 }
 
-// Obtiene listas de acciones y usuarios para filtros del historial
+// Acciones y personas que aparecen en el historial
 export async function getDatosAuxiliares() {
-	const acciones = await db
-		.select({
-			id: activos.id,
-			nombre: activos.nombre,
-			fecha_registro: activos.fecha_registro,
-			estado: activos.estado,
+	const listaAcciones = await db
+		.selectDistinct({
+			id: acciones.id,
+			nombre: acciones.nombre,
+			slug: acciones.slug,
 		})
-		.from(activos);
-	if (!acciones.length) {
-		throw new Error("No se encontraron acciones");
-	}
+		.from(acciones)
+		.innerJoin(eventos, eq(eventos.accion_id, acciones.id))
+		.orderBy(asc(acciones.nombre));
 
-	const usuariosList = await db
-		.selectDistinct({ id: usuarios.id, nombre: usuarios.nombre })
-		.from(usuarios)
-		.innerJoin(historial, eq(usuarios.id, historial.usuario_responsable))
-		.orderBy(asc(usuarios.nombre));
-	if (!usuariosList.length) {
-		throw new Error("No se encontraron usuarios");
-	}
+	const listaPersonas = await db
+		.selectDistinct({ id: personas.id, nombre: personas.nombre })
+		.from(personas)
+		.innerJoin(eventos, eq(eventos.actor_id, personas.id))
+		.orderBy(asc(personas.nombre));
 
 	return {
-		acciones,
-		usuarios: usuariosList,
+		acciones: listaAcciones,
+		usuarios: listaPersonas,
 	};
 }
 
-// Registro de acciones en el historial
-
+// Registro manual de una acción en el historial
 export async function registrarAccion(
 	activoId: number,
 	accion: string,
@@ -124,34 +128,59 @@ export async function registrarAccion(
 	usuarioAsignado: number | undefined,
 	ubicacionNueva: number | undefined,
 ) {
-	// Verifica que el activo exista antes de registrar
 	const [activo] = await db
 		.select({ id: activos.id })
 		.from(activos)
 		.where(eq(activos.id, activoId))
 		.limit(1);
+
 	if (!activo) {
-		throw new Error(`No se encontró ningún activo con el ID ${activoId}.`);
+		throw new ErrorHttp(
+			404,
+			`No se encontró ningún activo con el ID ${activoId}.`,
+		);
 	}
 
-	const fechaRegistrada = fecha
-		? new Date(fecha).toISOString().replace("T", " ").substring(0, 19)
-		: new Date().toISOString().replace("T", " ").substring(0, 19);
+	const [accionRegistrada] = await db
+		.select({ id: acciones.id, nombre: acciones.nombre })
+		.from(acciones)
+		.where(or(eq(acciones.slug, accion), eq(acciones.nombre, accion)))
+		.limit(1);
 
-	const [result] = await db.insert(historial).values({
-		activo_id: activoId,
-		accion,
-		fecha: new Date(fechaRegistrada),
-		usuario_responsable: usuarioResponsable ?? null,
-		usuario_asignado: usuarioAsignado || null,
-		ubicacion_nueva: ubicacionNueva || null,
-		detalles: detalles || null,
-	} as unknown as typeof historial.$inferInsert);
+	const accionId =
+		accionRegistrada?.id ??
+		(
+			await db
+				.select({ id: acciones.id })
+				.from(acciones)
+				.where(eq(acciones.slug, "activo.actualizado"))
+				.limit(1)
+		)[0]?.id;
+
+	if (!accionId) {
+		throw new ErrorHttp(500, "No hay acciones registradas en el catálogo.");
+	}
+
+	const [creado] = await db
+		.insert(eventos)
+		.values({
+			entidad: "activo",
+			entidad_id: activoId,
+			accion_id: accionId,
+			actor_id: usuarioResponsable ?? null,
+			datos_nuevos: {
+				detalles: detalles ?? null,
+				usuario_asignado: usuarioAsignado ?? null,
+				ubicacion_nueva: ubicacionNueva ?? null,
+			},
+			...(fecha ? { created_at: new Date(fecha) } : {}),
+		})
+		.$returningId();
 
 	return {
-		id: (result as unknown as { insertId: number }).insertId,
+		id: creado.id,
 		accion,
-		fecha: fechaRegistrada,
+		fecha: fecha ?? new Date().toISOString(),
 		usuario_responsable: usuarioResponsable,
 		usuario_asignado: usuarioAsignado,
 		ubicacion_nueva: ubicacionNueva,
