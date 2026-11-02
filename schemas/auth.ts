@@ -27,7 +27,7 @@ export const registroSchema = z.object({
 	fecha_ingreso: z
 		.string({ error: "Debe ser un texto válido" })
 		.min(1, { error: "La fecha de ingreso es obligatoria" }),
-	rol: z.enum(["Administrador", "Usuario"], {
+	rol: z.enum(["Administrador", "Técnico", "Almacén", "Empleado", "Usuario"], {
 		error: "Rol no válido",
 	}),
 });

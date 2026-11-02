@@ -1,4 +1,6 @@
 // Express
+
+import { eq } from "drizzle-orm";
 import type {
 	NextFunction,
 	Request,
@@ -6,68 +8,102 @@ import type {
 } from "express-serve-static-core";
 // JWT
 import jwt from "jsonwebtoken";
-// Configuración y logger
+import db from "../config/db.js";
+// Configuración, BD y logger
 import env from "../config/env.js";
+import { personas } from "../db/schema.js";
 import { logger } from "../services/logger.js";
 
-// Middleware: verifica el token JWT en el encabezado Authorization
-export function autenticar(req: Request, res: Response, next: NextFunction) {
-	// 1. Extrae el token del encabezado "Bearer <token>"
+interface TokenDecodificado {
+	id: number;
+	email: string;
+	nombre: string;
+	rol: string;
+	tv?: number;
+}
+
+// Responde un error de autenticación con código estable para el frontend
+function rechazar(res: Response, error: string, codigo: string): void {
+	res.status(401).json({ error, codigo });
+}
+
+// Middleware: verifica el token JWT y que siga vigente para el usuario
+export async function autenticar(
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) {
 	const authHeader = req.header("Authorization");
 
-	// 2. Rechaza si no hay token
-	if (!authHeader || !authHeader.startsWith("Bearer ")) {
+	if (!authHeader?.startsWith("Bearer ")) {
 		logger.warn("Auth fallida: sin token", { ip: req.ip, path: req.path });
-		res.status(401).json({
-			error: "Acceso denegado. El encabezado Authorization es obligatorio.",
-		});
+		rechazar(res, "Debes iniciar sesión para continuar.", "SIN_TOKEN");
 		return;
 	}
 
 	const token = authHeader.split(" ")[1];
 
-	// 3. Verifica la firma del token con la clave secreta
+	let decoded: TokenDecodificado;
 	try {
-		const decoded = jwt.verify(token, env.JWT_SECRET) as {
-			id: number;
-			email: string;
-			nombre: string;
-			rol: string;
-		};
-
-		// 4. Rechaza tokens que no contengan datos esenciales
-		if (!decoded.id || !decoded.email) {
-			logger.warn("Auth fallida: token sin datos esenciales", { ip: req.ip });
-			res
-				.status(403)
-				.json({ error: "Token inválido: falta información esencial." });
-			return;
-		}
-
-		// 5. Adjunta el usuario decodificado a la request
-		req.user = decoded;
-		next();
-
-		// 6. Maneja errores específicos del JWT
+		decoded = jwt.verify(token, env.JWT_SECRET) as TokenDecodificado;
 	} catch (error: unknown) {
 		const errName = (error as Error).name;
 		logger.warn("Auth fallida: token inválido", { ip: req.ip, error: errName });
 
-		// Token expirado
 		if (errName === "TokenExpiredError") {
-			res.status(403).json({
-				error: "Token expirado. Por favor, inicia sesión nuevamente.",
-			});
+			rechazar(
+				res,
+				"Tu sesión expiró. Vuelve a iniciar sesión.",
+				"TOKEN_EXPIRADO",
+			);
 			return;
 		}
 
-		// Token manipulado o malformado
-		if (errName === "JsonWebTokenError") {
-			res.status(403).json({ error: "Token inválido o ha sido manipulado." });
+		rechazar(
+			res,
+			"Tu sesión no es válida. Vuelve a iniciar sesión.",
+			"TOKEN_INVALIDO",
+		);
+		return;
+	}
+
+	if (!decoded.id || !decoded.email) {
+		logger.warn("Auth fallida: token sin datos esenciales", { ip: req.ip });
+		rechazar(
+			res,
+			"Tu sesión no es válida. Vuelve a iniciar sesión.",
+			"TOKEN_INVALIDO",
+		);
+		return;
+	}
+
+	try {
+		const [actual] = await db
+			.select({
+				tv: personas.token_version,
+				deleted_at: personas.deleted_at,
+			})
+			.from(personas)
+			.where(eq(personas.id, decoded.id))
+			.limit(1);
+
+		if (!actual || actual.deleted_at) {
+			rechazar(res, "Tu cuenta ya no está activa.", "CUENTA_INACTIVA");
 			return;
 		}
 
-		// Cualquier otro error del JWT
-		res.status(403).json({ error: "Token inválido o expirado." });
+		if (decoded.tv === undefined || actual.tv !== decoded.tv) {
+			rechazar(
+				res,
+				"Tu sesión se cerró porque cambió la contraseña o se cerró en otro dispositivo.",
+				"SESION_INVALIDADA",
+			);
+			return;
+		}
+
+		req.user = { ...decoded, tv: actual.tv };
+		next();
+	} catch (error) {
+		next(error);
 	}
 }

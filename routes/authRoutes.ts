@@ -30,6 +30,9 @@ router.post(
 	authController.login,
 );
 
+// POST /api/auth/logout-all — invalida todas las sesiones del usuario
+router.post("/logout-all", autenticar, authController.logoutAll);
+
 // GET /api/auth/test — verifica que el token sea válido
 router.get("/test", autenticar, permisos("Administrador"), authController.test);
 

@@ -6,6 +6,7 @@ import type {
 } from "express-serve-static-core";
 // Logger
 import { logger } from "../services/logger.js";
+import { codigoRol } from "../services/presentacion.js";
 
 // Middleware: autoriza el acceso según el rol del usuario
 export function permisos(...requiredRoles: string[]) {
@@ -13,14 +14,15 @@ export function permisos(...requiredRoles: string[]) {
 		const user = req.user;
 
 		// 1. Rechaza si el usuario no tiene datos válidos en el token
-		if (!user || !user.id || !user.email) {
+		if (!user?.id || !user?.email) {
 			logger.warn("Acceso denegado: usuario sin datos", {
 				ip: req.ip,
 				path: req.path,
 			});
-			res
-				.status(403)
-				.json({ error: "Token inválido: falta información esencial." });
+			res.status(403).json({
+				error: "No tienes permisos para esta acción.",
+				codigo: "SIN_PERMISOS",
+			});
 			return;
 		}
 
@@ -35,12 +37,12 @@ export function permisos(...requiredRoles: string[]) {
 		}
 
 		// 3. Compara el rol del usuario contra los roles permitidos
-		if (
-			user.rol &&
-			requiredRoles
-				.map((role) => role.toLowerCase())
-				.includes(user.rol.toLowerCase())
-		) {
+		const rolUsuario = codigoRol(user.rol) ?? user.rol?.toLowerCase();
+		const rolesPermitidos = requiredRoles
+			.map((role) => codigoRol(role) ?? role.toLowerCase())
+			.filter(Boolean);
+
+		if (rolUsuario && rolesPermitidos.includes(rolUsuario)) {
 			// 3a. Coincide — permite el acceso
 			next();
 		} else {
@@ -52,7 +54,8 @@ export function permisos(...requiredRoles: string[]) {
 				path: req.path,
 			});
 			res.status(403).json({
-				error: `Acceso denegado. Se requiere uno de los siguientes roles: ${requiredRoles.join(", ")}.`,
+				error: "No tienes permisos para esta acción.",
+				codigo: "SIN_PERMISOS",
 			});
 		}
 	};
