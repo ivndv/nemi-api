@@ -6,8 +6,20 @@ import app from "./app.js";
 import { pool } from "./config/db.js";
 // Config
 import env from "./config/env.js";
+import { cerrarRedis } from "./services/redis.js";
+import { cargarZonaHoraria } from "./services/zonaHoraria.js";
 
 const PORT = env.SERVER_PORT;
+
+// 0. Carga la zona horaria de negocio para cálculos de "hoy"
+try {
+	await cargarZonaHoraria();
+} catch (error) {
+	console.warn(
+		"[SERVER] No se pudo cargar la zona horaria, se usará UTC.",
+		error instanceof Error ? error.message : error,
+	);
+}
 
 // 1. Inicia el servidor en el puerto configurado
 const server = app.listen(PORT, "0.0.0.0", () => {
@@ -24,7 +36,7 @@ const server = app.listen(PORT, "0.0.0.0", () => {
 const apagadoGraceful = async (signal: string) => {
 	console.log(`[SERVER] ${signal} recibido, cerrando conexiones...`);
 	server.close(() => {
-		pool.end().then(() => {
+		Promise.all([pool.end(), cerrarRedis()]).then(() => {
 			console.log("[SERVER] Conexiones cerradas, adiós.");
 			process.exit(0);
 		});
