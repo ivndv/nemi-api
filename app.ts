@@ -7,8 +7,6 @@ import compression from "compression";
 import express from "express";
 // Documentación
 import swaggerUi from "swagger-ui-express";
-// Config
-import env from "./config/env.js";
 // Middleware
 import { errores } from "./middleware/errores.js";
 import { httpLog } from "./middleware/httpLog.js";

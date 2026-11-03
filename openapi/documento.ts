@@ -42,9 +42,7 @@ import {
 } from "../schemas/personas.js";
 import {
 	activosQuerySchema,
-	adjuntosQuerySchema,
 	asignacionesQuerySchema,
-	garantiasQuerySchema,
 	historialQuerySchema,
 	incidenciasQuerySchema,
 	licenciasQuerySchema,
