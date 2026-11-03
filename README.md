@@ -12,10 +12,10 @@ El modelo de datos vive en [`db/schema.ts`](db/schema.ts) y las migraciones en [
 
 https://nemi.mgdc.site
 
-| Campo | Valor |
-|---|---|
-| Correo | `empleado@nemi.dev` |
-| Contraseña | `Nemi123!` |
+| Campo      | Valor               |
+| ---------- | ------------------- |
+| Correo     | `empleado@nemi.dev` |
+| Contraseña | `Nemi123!`          |
 
 El usuario demo tiene rol **Empleado**: consulta sus activos, reporta incidencias y crea solicitudes.
 No puede editar el inventario ni acceder a administración.
