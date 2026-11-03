@@ -6,7 +6,19 @@ API central de Nemi: la plataforma interna de TI para administrar el ciclo de vi
 tecnológicos de una organización. Gestiona inventario, personas, sedes, asignaciones, licencias con
 asientos, garantías, mantenimientos, solicitudes, incidencias y auditoría.
 
-El modelo completo está documentado en [`docs/MODELO.md`](docs/MODELO.md).
+El modelo de datos vive en [`db/schema.ts`](db/schema.ts) y las migraciones en [`drizzle/`](drizzle/).
+
+## Demo
+
+https://nemi.mgdc.site
+
+| Campo | Valor |
+|---|---|
+| Correo | `empleado@nemi.dev` |
+| Contraseña | `Nemi123!` |
+
+El usuario demo tiene rol **Empleado**: consulta sus activos, reporta incidencias y crea solicitudes.
+No puede editar el inventario ni acceder a administración.
 
 ## Características
 
