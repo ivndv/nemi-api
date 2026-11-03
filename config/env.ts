@@ -11,16 +11,10 @@ const envSchema = z.object({
 	// Lista separada por comas; si existe, reemplaza a FRONTEND_URL
 	CORS_ORIGINS: z.string().optional(),
 
-	// Entorno y documentación
+	// Entorno
 	NODE_ENV: z
 		.enum(["development", "test", "production"])
 		.default("development"),
-	ENABLE_DOCS: z
-		.enum(["true", "false"])
-		.default("false")
-		.transform((valor) => valor === "true"),
-	DOCS_USER: z.string().optional(),
-	DOCS_PASS: z.string().optional(),
 
 	// Base de datos
 	DB_HOST: z.string().min(1, { error: "DB_HOST es requerido" }),

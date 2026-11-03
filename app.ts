@@ -2,8 +2,6 @@
  * Configuración y montaje de la aplicación Express
  */
 
-// Node
-import crypto from "node:crypto";
 // Express
 import compression from "compression";
 import express from "express";
@@ -65,56 +63,15 @@ app.get("/", (_req, res) => {
 	});
 });
 
-// Documentación (generada desde Zod), protegida fuera de desarrollo
-const docsHabilitados = env.NODE_ENV !== "production" || env.ENABLE_DOCS;
-
-function protegerDocs(
-	req: express.Request,
-	res: express.Response,
-	next: express.NextFunction,
-) {
-	// En producción, si no hay credenciales configuradas, la ruta no existe
-	if (!env.DOCS_USER || !env.DOCS_PASS) {
-		if (env.NODE_ENV === "production") {
-			res.status(404).json({ error: "Ruta no encontrada" });
-			return;
-		}
-		next();
-		return;
-	}
-
-	const header = req.header("authorization") ?? "";
-
-	if (header.startsWith("Basic ")) {
-		const esperado = Buffer.from(`${env.DOCS_USER}:${env.DOCS_PASS}`);
-		const recibido = Buffer.from(header.slice(6).trim(), "base64");
-
-		if (
-			esperado.length === recibido.length &&
-			crypto.timingSafeEqual(esperado, recibido)
-		) {
-			next();
-			return;
-		}
-	}
-
-	res.setHeader("WWW-Authenticate", 'Basic realm="Nemi API Docs"');
-	res.status(401).json({
-		error: "Autenticación requerida para la documentación.",
-	});
-}
-
-if (docsHabilitados) {
-	app.get("/api/doc", protegerDocs, (_req, res) => {
-		res.json(apiDoc);
-	});
-	app.use(
-		"/api/docs",
-		protegerDocs,
-		swaggerUi.serve,
-		swaggerUi.setup(apiDoc as unknown as Record<string, unknown>),
-	);
-}
+// Documentación (generada desde Zod) — pública
+app.get("/api/doc", (_req, res) => {
+	res.json(apiDoc);
+});
+app.use(
+	"/api/docs",
+	swaggerUi.serve,
+	swaggerUi.setup(apiDoc as unknown as Record<string, unknown>),
+);
 
 // Rutas de la API
 app.use("/api/health", healthRoutes);
