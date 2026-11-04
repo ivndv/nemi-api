@@ -25,7 +25,7 @@ jobs:
   # Job 1: typecheck, lint, formato y migraciones
   lint:
     name: Typecheck & Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, arm64]
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -50,7 +50,7 @@ jobs:
   docker:
     name: Docker build
     needs: [lint]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, arm64]
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -64,7 +64,7 @@ jobs:
     name: Deploy to Dokploy
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: [lint, docker]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, arm64]
     timeout-minutes: 10
     steps:
       # Dispara el deploy en Dokploy vía webhook autenticado
