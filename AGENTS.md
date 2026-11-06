@@ -22,20 +22,20 @@
 
 ## 3. Stack tecnológico
 
-| Capa | Tecnología |
-| :--- | :--- |
-| Runtime y gestor | Bun `1.4.4` |
-| Lenguaje | TypeScript estricto, ESM (`nodenext`) |
-| Framework | Express `5.3` |
-| Base de datos | MySQL `9` |
-| ORM y migraciones | Drizzle ORM `0.45.4`, Drizzle Kit `0.31.11` |
-| Validación | Zod `4.6.7` |
-| Seguridad | JWT, Helmet, `express-rate-limit`, CORS por origen |
-| Hash | Microservicio Go + Argon2id (`hash-service`) |
-| Archivos | Cloudflare R2 (`assets-mgdc/nemi/`) |
-| Documentación | Swagger UI + `zod-openapi` |
-| Linter | Biome `2.6.4` |
-| Despliegue | Docker + Dokploy (webhook con Cloudflare Access) |
+| Capa              | Tecnología                                         |
+| :---------------- | :------------------------------------------------- |
+| Runtime y gestor  | Bun `1.4.4`                                        |
+| Lenguaje          | TypeScript estricto, ESM (`nodenext`)              |
+| Framework         | Express `5.3`                                      |
+| Base de datos     | MySQL `9`                                          |
+| ORM y migraciones | Drizzle ORM `0.45.4`, Drizzle Kit `0.31.11`        |
+| Validación        | Zod `4.6.7`                                        |
+| Seguridad         | JWT, Helmet, `express-rate-limit`, CORS por origen |
+| Hash              | Microservicio Go + Argon2id (`hash-service`)       |
+| Archivos          | Cloudflare R2 (`assets-mgdc/nemi/`)                |
+| Documentación     | Swagger UI + `zod-openapi`                         |
+| Linter            | Biome `2.6.4`                                      |
+| Despliegue        | Docker + Dokploy (webhook con Cloudflare Access)   |
 
 ## 4. Estructura del código
 
@@ -108,37 +108,37 @@ Públicos: `GET /api/health`, `GET /api/docs`, `GET /api/doc`.
 
 Protegidos (JWT):
 
-| Método | Ruta | Roles |
-| :--- | :--- | :--- |
-| GET | `/api/gestion-activos/activos` | todos (empleado solo lo suyo) |
-| GET | `/api/gestion-activos/activos/:id` | todos (empleado solo lo suyo) |
-| POST/PUT | `/api/gestion-activos/activos` | administrador, técnico, almacén |
-| PATCH | `/api/gestion-activos/baja/:id` | administrador, técnico |
-| DELETE | `/api/gestion-activos/activos/:id` | administrador, técnico |
-| GET/POST/PUT/DELETE | `/api/asignaciones` | lectura todos; escritura administrador, técnico, almacén |
-| GET | `/api/dashboard/resumen`, `/alertas` | todos |
-| GET/POST/PUT/DELETE | `/api/garantias` | lectura todos; escritura administrador, técnico |
-| GET | `/api/licencias` | todos |
-| GET/POST/PATCH | `/api/licencias/:id/asientos` | escritura administrador, técnico, almacén |
-| GET/POST | `/api/licencias/:id/renovaciones` | lectura todos; escritura administrador, técnico |
-| GET | `/api/mantenimientos` | todos (empleado solo los de sus activos) |
-| POST/PUT/PATCH | `/api/mantenimientos` | administrador, técnico |
-| GET | `/api/incidencias` | todos (empleado las suyas y las de sus activos) |
-| POST | `/api/incidencias` | todos |
-| PATCH | `/api/incidencias/:id/estado` | administrador, técnico |
-| POST | `/api/incidencias/:id/mantenimiento` | administrador, técnico |
-| GET | `/api/solicitudes` | todos (empleado solo las suyas) |
-| POST | `/api/solicitudes` | todos |
-| PATCH | `/api/solicitudes/:id/aprobar` | administrador, técnico |
-| PATCH | `/api/solicitudes/:id/rechazar` | administrador, técnico |
-| PATCH | `/api/solicitudes/:id/entregar` | administrador, técnico, almacén |
-| GET | `/api/adjuntos` | todos |
-| POST/DELETE | `/api/adjuntos` | administrador, técnico, almacén |
-| GET | `/api/historial/activos/:id` | todos |
-| GET/POST | `/api/reportes` | administrador, técnico, almacén |
-| GET/PUT | `/api/configuracion` | administrador (perfil: todos) |
-| POST | `/api/auth/login` | público |
-| POST | `/api/auth/registro` | administrador |
+| Método              | Ruta                                 | Roles                                                    |
+| :------------------ | :----------------------------------- | :------------------------------------------------------- |
+| GET                 | `/api/gestion-activos/activos`       | todos (empleado solo lo suyo)                            |
+| GET                 | `/api/gestion-activos/activos/:id`   | todos (empleado solo lo suyo)                            |
+| POST/PUT            | `/api/gestion-activos/activos`       | administrador, técnico, almacén                          |
+| PATCH               | `/api/gestion-activos/baja/:id`      | administrador, técnico                                   |
+| DELETE              | `/api/gestion-activos/activos/:id`   | administrador, técnico                                   |
+| GET/POST/PUT/DELETE | `/api/asignaciones`                  | lectura todos; escritura administrador, técnico, almacén |
+| GET                 | `/api/dashboard/resumen`, `/alertas` | todos                                                    |
+| GET/POST/PUT/DELETE | `/api/garantias`                     | lectura todos; escritura administrador, técnico          |
+| GET                 | `/api/licencias`                     | todos                                                    |
+| GET/POST/PATCH      | `/api/licencias/:id/asientos`        | escritura administrador, técnico, almacén                |
+| GET/POST            | `/api/licencias/:id/renovaciones`    | lectura todos; escritura administrador, técnico          |
+| GET                 | `/api/mantenimientos`                | todos (empleado solo los de sus activos)                 |
+| POST/PUT/PATCH      | `/api/mantenimientos`                | administrador, técnico                                   |
+| GET                 | `/api/incidencias`                   | todos (empleado las suyas y las de sus activos)          |
+| POST                | `/api/incidencias`                   | todos                                                    |
+| PATCH               | `/api/incidencias/:id/estado`        | administrador, técnico                                   |
+| POST                | `/api/incidencias/:id/mantenimiento` | administrador, técnico                                   |
+| GET                 | `/api/solicitudes`                   | todos (empleado solo las suyas)                          |
+| POST                | `/api/solicitudes`                   | todos                                                    |
+| PATCH               | `/api/solicitudes/:id/aprobar`       | administrador, técnico                                   |
+| PATCH               | `/api/solicitudes/:id/rechazar`      | administrador, técnico                                   |
+| PATCH               | `/api/solicitudes/:id/entregar`      | administrador, técnico, almacén                          |
+| GET                 | `/api/adjuntos`                      | todos                                                    |
+| POST/DELETE         | `/api/adjuntos`                      | administrador, técnico, almacén                          |
+| GET                 | `/api/historial/activos/:id`         | todos                                                    |
+| GET/POST            | `/api/reportes`                      | administrador, técnico, almacén                          |
+| GET/PUT             | `/api/configuracion`                 | administrador (perfil: todos)                            |
+| POST                | `/api/auth/login`                    | público                                                  |
+| POST                | `/api/auth/registro`                 | administrador                                            |
 
 ### 5.4 Errores, logs y validación
 
@@ -164,15 +164,15 @@ Validación de entrada:
 
 ## 6. Variables de entorno
 
-| Variable | Descripción |
-| :--- | :--- |
-| `SERVER_PORT` | Puerto HTTP (3030 por defecto) |
-| `FRONTEND_URL` | Origen permitido por CORS |
-| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Conexión MySQL (`DB_NAME=nemi-db`) |
-| `JWT_SECRET`, `JWT_EXPIRES_IN` | Firma y vigencia del token |
-| `HASH_SERVICE_URL`, `HASH_SERVICE_KEY` | Microservicio Argon2id |
-| `R2_*` | Credenciales de Cloudflare R2 |
-| `SEED_PASSWORD` | Contraseña de los usuarios de ejemplo (solo seed) |
+| Variable                                                  | Descripción                                       |
+| :-------------------------------------------------------- | :------------------------------------------------ |
+| `SERVER_PORT`                                             | Puerto HTTP (3030 por defecto)                    |
+| `FRONTEND_URL`                                            | Origen permitido por CORS                         |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Conexión MySQL (`DB_NAME=nemi-db`)                |
+| `JWT_SECRET`, `JWT_EXPIRES_IN`                            | Firma y vigencia del token                        |
+| `HASH_SERVICE_URL`, `HASH_SERVICE_KEY`                    | Microservicio Argon2id                            |
+| `R2_*`                                                    | Credenciales de Cloudflare R2                     |
+| `SEED_PASSWORD`                                           | Contraseña de los usuarios de ejemplo (solo seed) |
 
 ## 7. Comandos
 
@@ -209,7 +209,7 @@ bun run openapi:check      # Verifica la documentación OpenAPI
 
 - **Prohibido** hacer commit o push sin la aprobación explícita del usuario.
 - El desarrollo va en `develop`; el merge a `main` solo se hace con aprobación.
-- Mensajes de commit con *Conventional Commits*, en minúsculas y en español.
+- Mensajes de commit con _Conventional Commits_, en minúsculas y en español.
 - El despliegue es con **Docker + Dokploy**; el webhook está protegido con Cloudflare Access.
 
 ## 10. CI/CD
