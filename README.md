@@ -10,7 +10,7 @@ El modelo de datos vive en [`db/schema.ts`](db/schema.ts) y las migraciones en [
 
 ## Demo
 
-https://nemi.mgdc.site
+https://nemi.liuma.app
 
 | Campo      | Valor               |
 | ---------- | ------------------- |
@@ -115,7 +115,7 @@ Nunca uses `drizzle-kit push` fuera de una base local de pruebas.
 ## Despliegue
 
 Desplegado con Dokploy en un VPS. Swagger disponible en:
-[Nemi API](https://nemi-api.fluxdv.icu/api/docs)
+[Nemi API](https://nemi-api.liuma.app/api/docs)
 
 El contenedor aplica las migraciones pendientes antes de arrancar.
 
