@@ -20,7 +20,7 @@ export const registroSchema = z.object({
 		.email({ error: "El correo electrónico no es válido" }),
 	contrasena: z
 		.string()
-		.min(8, { error: "La contraseña debe tener al menos 8 caracteres" }),
+		.min(12, { error: "La contraseña debe tener al menos 12 caracteres" }),
 	departamento: z
 		.string({ error: "Debe ser un texto válido" })
 		.min(1, { error: "El departamento es obligatorio" }),

@@ -72,7 +72,7 @@ export const updatePasswordSchema = z
 			.min(1, { error: "La contraseña actual es obligatoria" }),
 		nueva_contrasena: z
 			.string()
-			.min(8, { error: "La contraseña debe tener al menos 8 caracteres" }),
+			.min(12, { error: "La contraseña debe tener al menos 12 caracteres" }),
 		confirmar_nueva_contrasena: z
 			.string({ error: "Debe ser un texto válido" })
 			.min(1, { error: "Debes confirmar la nueva contraseña" }),

@@ -16,7 +16,7 @@ export const crearPersonaSchema = z.object({
 		.email({ error: "El correo electrónico no es válido" }),
 	contrasena: z
 		.string({ error: "Debe ser un texto válido" })
-		.min(8, { error: "La contraseña debe tener al menos 8 caracteres" }),
+		.min(12, { error: "La contraseña debe tener al menos 12 caracteres" }),
 	rol: rolSchema,
 	departamento: z
 		.string({ error: "Debe ser un texto válido" })
@@ -42,7 +42,7 @@ export const actualizarPersonaSchema = z.object({
 export const cambiarPasswordSchema = z.object({
 	contrasena: z
 		.string({ error: "Debe ser un texto válido" })
-		.min(8, { error: "La contraseña debe tener al menos 8 caracteres" }),
+		.min(12, { error: "La contraseña debe tener al menos 12 caracteres" }),
 });
 
 export const listarPersonasQuerySchema = z.object({
