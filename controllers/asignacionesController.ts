@@ -1,6 +1,8 @@
 // Express
 import type { Request, Response } from "express-serve-static-core";
 import * as asignacionesService from "../services/asignacionesService.js";
+// Autorización
+import { esEmpleado } from "../services/autorizacion.js";
 // Servicios
 import { invalidarOperacion } from "../services/cacheInvalidation.js";
 // Errores
@@ -8,10 +10,9 @@ import { ErrorHttp } from "../services/errors.js";
 
 // Controller: lista paginada de asignaciones
 export const getAsignaciones = async (req: Request, res: Response) => {
-	const esEmpleado = req.user?.rol === "empleado";
 	const result = await asignacionesService.getAsignaciones(
 		req.validatedQuery as Record<string, string | undefined>,
-		esEmpleado ? req.user?.id : undefined,
+		esEmpleado(req.user?.rol) ? req.user?.id : undefined,
 	);
 	res.json(result);
 };
@@ -22,8 +23,8 @@ export const getAsignacionPorId = async (req: Request, res: Response) => {
 		req.params.id as string,
 	);
 
-	if (req.user?.rol === "empleado" && result.usuario_id !== req.user.id) {
-		throw new ErrorHttp(403, "No autorizado para ver esta asignación");
+	if (esEmpleado(req.user?.rol) && result.usuario_id !== req.user?.id) {
+		throw new ErrorHttp(404, "La asignación no existe");
 	}
 
 	res.json({ data: result });

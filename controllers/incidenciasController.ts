@@ -4,10 +4,10 @@ import type {
 	Request,
 	Response,
 } from "express-serve-static-core";
+// Autorización
+import { esEmpleado } from "../services/autorizacion.js";
 // Servicio
 import * as incidenciasService from "../services/incidenciasService.js";
-
-const esEmpleado = (req: Request) => req.user?.rol === "empleado";
 
 // GET /api/incidencias
 export const listar = async (
@@ -18,7 +18,7 @@ export const listar = async (
 	try {
 		const data = await incidenciasService.listarIncidencias(
 			req.validatedQuery as Record<string, string | undefined>,
-			esEmpleado(req) ? req.user?.id : undefined,
+			esEmpleado(req.user?.rol) ? req.user?.id : undefined,
 		);
 		res.json(data);
 	} catch (error) {
@@ -35,7 +35,7 @@ export const detalle = async (
 	try {
 		const data = await incidenciasService.getIncidencia(
 			Number(req.params.id),
-			esEmpleado(req) ? req.user?.id : undefined,
+			esEmpleado(req.user?.rol) ? req.user?.id : undefined,
 		);
 		res.json({ data });
 	} catch (error) {
@@ -53,6 +53,7 @@ export const crear = async (
 		const data = await incidenciasService.crearIncidencia(
 			req.validated as Parameters<typeof incidenciasService.crearIncidencia>[0],
 			req.user?.id as number,
+			req.user?.rol,
 		);
 		res.status(201).json({ data, message: "Incidencia reportada" });
 	} catch (error) {

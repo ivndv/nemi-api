@@ -18,7 +18,11 @@ export const listar = async (
 			entidad?: string;
 			entidad_id?: number;
 		};
-		const data = await adjuntosService.listarAdjuntos(entidad, entidad_id);
+		const data = await adjuntosService.listarAdjuntos(
+			entidad,
+			entidad_id,
+			req.user,
+		);
 		res.json({ data });
 	} catch (error) {
 		next(error);

@@ -32,6 +32,7 @@ import { garantiasQuerySchema } from "../schemas/query.js";
 router.get(
 	"/",
 	autenticar,
+	permisos("Administrador", "Técnico"),
 	validarQuery(garantiasQuerySchema),
 	listarGarantias,
 );

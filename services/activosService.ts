@@ -22,6 +22,12 @@ import {
 	tiposActivo,
 	ubicaciones,
 } from "../db/schema.js";
+import {
+	esEmpleado,
+	puedeVerCostos,
+	puedeVerDueno,
+	puedeVerGarantias,
+} from "./autorizacion.js";
 import { ErrorHttp } from "./errors.js";
 import { registrarEvento } from "./eventosService.js";
 import {
@@ -78,10 +84,14 @@ export async function getActivos(
 		fecha_fin?: string;
 	},
 	personaId?: number,
+	rol?: string,
 ) {
 	const page = Number(queryParams_.page) || 1;
 	const limit = Math.min(Number(queryParams_.limit) || 10, 100);
 	const offset = (page - 1) * limit;
+	const verCostos = puedeVerCostos(rol);
+	const verDueno = puedeVerDueno(rol);
+	const empleado = esEmpleado(rol);
 
 	const orden = queryParams_.orden || "asc";
 	const direccion = orden.toLowerCase() === "desc" ? "DESC" : "ASC";
@@ -238,16 +248,18 @@ export async function getActivos(
 		usuario_asignado: fila.usuario_asignado ?? undefined,
 		proveedor: fila.proveedor,
 		proveedor_id: fila.proveedor_id,
-		dueno_id: fila.dueno_id,
+		dueno_id: verDueno ? fila.dueno_id : null,
 		etiqueta_serial: fila.etiqueta_serial,
 		fecha_adquisicion: fila.fecha_adquisicion,
-		valor_compra: fila.valor_compra,
+		valor_compra: verCostos ? fila.valor_compra : null,
 		modelo: fila.modelo,
 		descripcion: fila.descripcion,
 		fecha_registro: fila.created_at,
-		tipo_licencia: fila.licencia_modalidad,
-		fecha_vencimiento_licencia: fila.licencia_fecha_renovacion,
-		costo_mensual: fila.licencia_costo,
+		tipo_licencia: empleado ? null : fila.licencia_modalidad,
+		fecha_vencimiento_licencia: empleado
+			? null
+			: fila.licencia_fecha_renovacion,
+		costo_mensual: verCostos ? fila.licencia_costo : null,
 	}));
 
 	return {
@@ -262,10 +274,19 @@ export async function getActivos(
 }
 
 // Obtiene un activo por su ID con sus relaciones
-export async function getActivoById(id: string, personaId?: number) {
+export async function getActivoById(
+	id: string,
+	personaId?: number,
+	rol?: string,
+) {
 	if (!Number.isInteger(Number(id)) || Number(id) <= 0) {
 		throw new ErrorHttp(400, "ID inválido");
 	}
+
+	const verCostos = puedeVerCostos(rol);
+	const verDueno = puedeVerDueno(rol);
+	const verGarantias = puedeVerGarantias(rol);
+	const empleado = esEmpleado(rol);
 
 	const [fila] = await db
 		.select({
@@ -339,7 +360,7 @@ export async function getActivoById(id: string, personaId?: number) {
 
 	// Un empleado solo puede ver un activo que tenga asignado
 	if (personaId && asignacionActiva?.persona_id !== personaId) {
-		throw new ErrorHttp(403, "No autorizado para ver este activo");
+		throw new ErrorHttp(404, "El activo no existe");
 	}
 
 	return {
@@ -352,8 +373,8 @@ export async function getActivoById(id: string, personaId?: number) {
 		condicion_label: etiquetaCondicion(fila.condicion),
 		condicion_fisica: etiquetaCondicion(fila.condicion),
 		fecha_adquisicion: fila.fecha_adquisicion,
-		valor_compra: fila.valor_compra,
-		valor_actual: fila.valor_compra,
+		valor_compra: verCostos ? fila.valor_compra : null,
+		valor_actual: verCostos ? fila.valor_compra : null,
 		descripcion: fila.descripcion,
 		foto_url: fila.foto_url,
 		ubicacion: { id: fila.ubicacion_id, nombre: fila.ubicacion_nombre },
@@ -362,30 +383,42 @@ export async function getActivoById(id: string, personaId?: number) {
 		fecha_creacion: fila.created_at,
 		fecha_actualizacion: fila.updated_at,
 		fecha_registro: fila.created_at,
-		dueno: { id: fila.dueno_id, nombre: fila.dueno_nombre },
+		dueno: verDueno
+			? { id: fila.dueno_id, nombre: fila.dueno_nombre }
+			: { id: 0, nombre: null },
 		proveedor: { id: fila.proveedor_id, nombre: fila.proveedor_nombre },
 		modelo: fila.modelo,
 		version_software: null,
-		tipo_licencia: fila.licencia_modalidad,
+		tipo_licencia: empleado ? null : fila.licencia_modalidad,
 		etiqueta_serial: fila.etiqueta_serial,
-		fecha_vencimiento_licencia: fila.licencia_renovacion,
-		costo_mensual: fila.licencia_costo,
+		fecha_vencimiento_licencia: empleado ? null : fila.licencia_renovacion,
+		costo_mensual: verCostos ? fila.licencia_costo : null,
 		recursos_asignados: null,
-		garantia: garantiasActivo.map((garantia) => ({
-			id: garantia.id,
-			nombre_garantia: garantia.nombre_garantia,
-			proveedor: {
-				id: garantia.proveedor_id,
-				nombre: garantia.proveedor_nombre,
-			},
-			fecha_inicio: garantia.fecha_inicio,
-			fecha_fin: garantia.fecha_fin,
-			estado_garantia: estadoGarantia(garantia.fecha_fin),
-			estado: estadoGarantia(garantia.fecha_fin),
-			descripcion: garantia.descripcion,
-			costo: garantia.costo,
-			condiciones: garantia.condiciones,
-		})),
+		garantia: verGarantias
+			? garantiasActivo.map((garantia) => ({
+					id: garantia.id,
+					nombre_garantia: garantia.nombre_garantia,
+					proveedor: {
+						id: garantia.proveedor_id,
+						nombre: garantia.proveedor_nombre,
+					},
+					fecha_inicio: garantia.fecha_inicio,
+					fecha_fin: garantia.fecha_fin,
+					estado_garantia: estadoGarantia(garantia.fecha_fin),
+					estado: estadoGarantia(garantia.fecha_fin),
+					descripcion: garantia.descripcion,
+					costo: garantia.costo,
+					condiciones: garantia.condiciones,
+				}))
+			: personaId
+				? garantiasActivo.map((garantia) => ({
+						id: garantia.id,
+						nombre_garantia: garantia.nombre_garantia,
+						fecha_fin: garantia.fecha_fin,
+						estado_garantia: estadoGarantia(garantia.fecha_fin),
+						estado: estadoGarantia(garantia.fecha_fin),
+					}))
+				: [],
 	};
 }
 

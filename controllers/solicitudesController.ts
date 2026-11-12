@@ -4,10 +4,10 @@ import type {
 	Request,
 	Response,
 } from "express-serve-static-core";
+// Autorización
+import { esEmpleado } from "../services/autorizacion.js";
 // Servicio
 import * as solicitudesService from "../services/solicitudesService.js";
-
-const esEmpleado = (req: Request) => req.user?.rol === "empleado";
 
 // GET /api/solicitudes
 export const listar = async (
@@ -18,7 +18,7 @@ export const listar = async (
 	try {
 		const data = await solicitudesService.listarSolicitudes(
 			req.validatedQuery as Record<string, string | undefined>,
-			esEmpleado(req) ? req.user?.id : undefined,
+			esEmpleado(req.user?.rol) ? req.user?.id : undefined,
 		);
 		res.json(data);
 	} catch (error) {
@@ -35,7 +35,7 @@ export const detalle = async (
 	try {
 		const data = await solicitudesService.getSolicitud(
 			Number(req.params.id),
-			esEmpleado(req) ? req.user?.id : undefined,
+			esEmpleado(req.user?.rol) ? req.user?.id : undefined,
 		);
 		res.json({ data });
 	} catch (error) {

@@ -18,7 +18,12 @@ import { validar } from "../middleware/validar.js";
 import { generarReporteSchema } from "../schemas/reporte.js";
 
 // GET /api/reportes/tipos — tipos de reporte disponibles
-router.get("/tipos", autenticar, tiposReporte);
+router.get(
+	"/tipos",
+	autenticar,
+	permisos("Administrador", "Técnico", "Almacén"),
+	tiposReporte,
+);
 
 // GET /api/reportes/datos-auxiliares — catálogos para filtros de reporte
 router.get(

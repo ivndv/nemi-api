@@ -118,7 +118,7 @@ export async function getSolicitud(id: number, personaId?: number) {
 	}
 
 	if (personaId && fila.solicitante_id !== personaId) {
-		throw new ErrorHttp(403, "No autorizado para ver esta solicitud");
+		throw new ErrorHttp(404, "La solicitud no existe");
 	}
 
 	return {

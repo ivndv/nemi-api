@@ -221,7 +221,11 @@ export async function actualizarPersona(
 	actorId: number,
 ) {
 	const [existente] = await db
-		.select({ id: personas.id, rol_id: personas.rol_id })
+		.select({
+			id: personas.id,
+			rol_id: personas.rol_id,
+			token_version: personas.token_version,
+		})
 		.from(personas)
 		.where(and(eq(personas.id, id), isNull(personas.deleted_at)))
 		.limit(1);
@@ -248,6 +252,7 @@ export async function actualizarPersona(
 
 	return await db.transaction(async (tx) => {
 		const valores: Partial<typeof personas.$inferInsert> = {};
+		let cambiaRol = false;
 
 		if (input.nombre) valores.nombre = input.nombre;
 		if (input.email) valores.email = input.email;
@@ -257,6 +262,12 @@ export async function actualizarPersona(
 		if (input.rol) {
 			const rol = await resolverRol(input.rol, tx);
 			valores.rol_id = rol.id;
+			cambiaRol = rol.id !== existente.rol_id;
+		}
+
+		// Un cambio de rol invalida las sesiones anteriores del usuario
+		if (cambiaRol) {
+			valores.token_version = existente.token_version + 1;
 		}
 
 		if (input.departamento) {

@@ -33,7 +33,12 @@ router.get(
 );
 
 // GET /api/historial/filtros-auxiliares — acciones y usuarios para filtros
-router.get("/filtros-auxiliares", autenticar, datosAuxiliares);
+router.get(
+	"/filtros-auxiliares",
+	autenticar,
+	permisos("Administrador", "Técnico", "Almacén"),
+	datosAuxiliares,
+);
 
 // POST /api/historial/activos/:id — registra acción en el historial
 router.post(

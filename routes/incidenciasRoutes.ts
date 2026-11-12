@@ -23,17 +23,24 @@ const router = express.Router();
 // Valida el id de la ruta antes del controller
 router.param("id", validarParamId);
 
-// Cualquier usuario autenticado puede reportar y consultar
+// Administrador, técnico y empleado pueden reportar y consultar
 router.get(
 	"/",
 	autenticar,
+	permisos("Administrador", "Técnico", "Empleado"),
 	validarQuery(incidenciasQuerySchema),
 	incidenciasController.listar,
 );
-router.get("/:id", autenticar, incidenciasController.detalle);
+router.get(
+	"/:id",
+	autenticar,
+	permisos("Administrador", "Técnico", "Empleado"),
+	incidenciasController.detalle,
+);
 router.post(
 	"/",
 	autenticar,
+	permisos("Administrador", "Técnico", "Empleado"),
 	validar(crearIncidenciaSchema),
 	incidenciasController.crear,
 );

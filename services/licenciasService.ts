@@ -57,12 +57,15 @@ async function sincronizarEstado(
 }
 
 // Lista de licencias con su ocupación
-export async function listarLicencias(query: {
-	page?: number;
-	limit?: number;
-	search?: string;
-	tipo_id?: string;
-}) {
+export async function listarLicencias(
+	query: {
+		page?: number;
+		limit?: number;
+		search?: string;
+		tipo_id?: string;
+	},
+	verCostos = true,
+) {
 	const page = Number(query.page) || 1;
 	const limit = Math.min(Number(query.limit) || 20, 100);
 	const offset = (page - 1) * limit;
@@ -121,16 +124,17 @@ export async function listarLicencias(query: {
 
 		return {
 			...fila,
+			costo: verCostos ? fila.costo : null,
+			periodicidad_costo: verCostos ? fila.periodicidad_costo : null,
 			ocupados: ocupadosNum,
 			libres: Math.max(fila.asientos_comprados - ocupadosNum, 0),
 			estado,
 			estado_label: etiqueta("estadoLicencia", estado),
 			modalidad_label: etiqueta("modalidad", fila.modalidad),
 			tipo_uso_label: etiqueta("tipoUso", fila.tipo_uso),
-			periodicidad_costo_label: etiqueta(
-				"periodicidad",
-				fila.periodicidad_costo,
-			),
+			periodicidad_costo_label: verCostos
+				? etiqueta("periodicidad", fila.periodicidad_costo)
+				: null,
 		};
 	});
 
@@ -146,7 +150,7 @@ export async function listarLicencias(query: {
 }
 
 // Detalle de una licencia con asientos y renovaciones
-export async function getLicencia(id: number) {
+export async function getLicencia(id: number, verCostos = true) {
 	const [licencia] = await db
 		.select({
 			activo_id: licencias.activo_id,
@@ -171,7 +175,7 @@ export async function getLicencia(id: number) {
 	}
 
 	const asientos = await listarAsientos(id);
-	const renovaciones = await listarRenovaciones(id);
+	const renovaciones = await listarRenovaciones(id, verCostos);
 	const ocupados = asientos.filter((a) => !a.fecha_liberacion).length;
 	const estado = estadoLicencia(
 		ocupados,
@@ -181,16 +185,18 @@ export async function getLicencia(id: number) {
 
 	return {
 		...licencia,
+		costo: verCostos ? licencia.costo : null,
+		periodicidad_costo: verCostos ? licencia.periodicidad_costo : null,
+		referencia_clave: verCostos ? licencia.referencia_clave : null,
 		ocupados,
 		libres: Math.max(licencia.asientos_comprados - ocupados, 0),
 		estado,
 		estado_label: etiqueta("estadoLicencia", estado),
 		modalidad_label: etiqueta("modalidad", licencia.modalidad),
 		tipo_uso_label: etiqueta("tipoUso", licencia.tipo_uso),
-		periodicidad_costo_label: etiqueta(
-			"periodicidad",
-			licencia.periodicidad_costo,
-		),
+		periodicidad_costo_label: verCostos
+			? etiqueta("periodicidad", licencia.periodicidad_costo)
+			: null,
 		asientos,
 		renovaciones,
 	};
@@ -386,8 +392,8 @@ export async function liberarAsiento(
 }
 
 // Renovaciones de una licencia
-export async function listarRenovaciones(id: number) {
-	return db
+export async function listarRenovaciones(id: number, verCostos = true) {
+	const filas = await db
 		.select({
 			id: renovacionesLicencia.id,
 			fecha: renovacionesLicencia.fecha,
@@ -400,6 +406,11 @@ export async function listarRenovaciones(id: number) {
 		.leftJoin(adjuntos, eq(renovacionesLicencia.adjunto_id, adjuntos.id))
 		.where(eq(renovacionesLicencia.licencia_id, id))
 		.orderBy(desc(renovacionesLicencia.fecha));
+
+	return filas.map((fila) => ({
+		...fila,
+		costo: verCostos ? fila.costo : null,
+	}));
 }
 
 export async function crearRenovacion(

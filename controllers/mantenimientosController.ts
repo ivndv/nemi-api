@@ -4,6 +4,8 @@ import type {
 	Request,
 	Response,
 } from "express-serve-static-core";
+// Autorización
+import { esEmpleado } from "../services/autorizacion.js";
 // Servicio
 import { invalidarOperacion } from "../services/cacheInvalidation.js";
 import * as mantenimientosService from "../services/mantenimientosService.js";
@@ -15,10 +17,9 @@ export const listar = async (
 	next: NextFunction,
 ) => {
 	try {
-		const esEmpleado = req.user?.rol === "empleado";
 		const data = await mantenimientosService.listarMantenimientos(
 			req.validatedQuery as Record<string, string | undefined>,
-			esEmpleado ? req.user?.id : undefined,
+			esEmpleado(req.user?.rol) ? req.user?.id : undefined,
 		);
 		res.json(data);
 	} catch (error) {
@@ -33,10 +34,9 @@ export const detalle = async (
 	next: NextFunction,
 ) => {
 	try {
-		const esEmpleado = req.user?.rol === "empleado";
 		const data = await mantenimientosService.getMantenimiento(
 			Number(req.params.id),
-			esEmpleado ? req.user?.id : undefined,
+			esEmpleado(req.user?.rol) ? req.user?.id : undefined,
 		);
 		res.json({ data });
 	} catch (error) {

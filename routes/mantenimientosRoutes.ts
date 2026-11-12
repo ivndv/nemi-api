@@ -23,14 +23,20 @@ const router = express.Router();
 // Valida el id de la ruta antes del controller
 router.param("id", validarParamId);
 
-// Lectura para autenticados (el empleado solo los de sus activos)
+// Lectura para administrador, técnico y empleado (solo sus activos)
 router.get(
 	"/",
 	autenticar,
+	permisos("Administrador", "Técnico", "Empleado"),
 	validarQuery(mantenimientosQuerySchema),
 	mantenimientosController.listar,
 );
-router.get("/:id", autenticar, mantenimientosController.detalle);
+router.get(
+	"/:id",
+	autenticar,
+	permisos("Administrador", "Técnico", "Empleado"),
+	mantenimientosController.detalle,
+);
 
 // Escritura
 router.post(

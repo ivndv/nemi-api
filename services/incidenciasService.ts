@@ -7,6 +7,7 @@ import {
 	mantenimientos,
 	personas,
 } from "../db/schema.js";
+import { exigirActivoAsignado } from "./autorizacion.js";
 import { ErrorHttp } from "./errors.js";
 import { registrarEvento } from "./eventosService.js";
 import { etiqueta } from "./presentacion.js";
@@ -19,7 +20,8 @@ function filtroVisibilidad(personaId?: number) {
 		eq(incidencias.reportante_id, personaId),
 		sql`EXISTS (SELECT 1 FROM asignaciones s
 		      WHERE s.activo_id = ${incidencias.activo_id}
-		        AND s.persona_id = ${personaId})`,
+		        AND s.persona_id = ${personaId}
+		        AND s.fecha_devolucion_real IS NULL)`,
 	);
 }
 
@@ -135,12 +137,13 @@ export async function getIncidencia(id: number, personaId?: number) {
 				and(
 					eq(asignaciones.activo_id, fila.activo_id),
 					eq(asignaciones.persona_id, personaId),
+					isNull(asignaciones.fecha_devolucion_real),
 				),
 			)
 			.limit(1);
 
 		if (fila.reportante_id !== personaId && !asignado) {
-			throw new ErrorHttp(403, "No autorizado para ver esta incidencia");
+			throw new ErrorHttp(404, "La incidencia no existe");
 		}
 	}
 
@@ -158,7 +161,10 @@ export async function crearIncidencia(
 		prioridad: "baja" | "media" | "alta";
 	},
 	actorId: number,
+	actorRol?: string,
 ) {
+	await exigirActivoAsignado({ id: actorId, rol: actorRol }, input.activo_id);
+
 	const [activo] = await db
 		.select({ id: activos.id })
 		.from(activos)

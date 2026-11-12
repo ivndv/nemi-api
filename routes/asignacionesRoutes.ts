@@ -27,6 +27,7 @@ import { asignacionesQuerySchema } from "../schemas/query.js";
 router.get(
 	"/activos-disponibles",
 	autenticar,
+	permisos("Administrador", "Técnico", "Almacén"),
 	validarQuery(asignacionesQuerySchema),
 	asignacionesController.getActivosDisponibles,
 );
@@ -35,6 +36,7 @@ router.get(
 router.get(
 	"/datos-auxiliares/:id",
 	autenticar,
+	permisos("Administrador", "Técnico", "Almacén"),
 	asignacionesController.obtenerDatosAuxiliares,
 );
 

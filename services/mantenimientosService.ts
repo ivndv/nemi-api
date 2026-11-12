@@ -55,7 +55,8 @@ export async function listarMantenimientos(
 		filtros.push(
 			sql`EXISTS (SELECT 1 FROM asignaciones s
 			      WHERE s.activo_id = ${mantenimientos.activo_id}
-			        AND s.persona_id = ${personaId})`,
+			        AND s.persona_id = ${personaId}
+			        AND s.fecha_devolucion_real IS NULL)`,
 		);
 	}
 
@@ -143,12 +144,13 @@ export async function getMantenimiento(id: number, personaId?: number) {
 				and(
 					eq(asignaciones.activo_id, fila.activo_id),
 					eq(asignaciones.persona_id, personaId),
+					isNull(asignaciones.fecha_devolucion_real),
 				),
 			)
 			.limit(1);
 
 		if (!asignado) {
-			throw new ErrorHttp(403, "No autorizado para ver este mantenimiento");
+			throw new ErrorHttp(404, "El mantenimiento no existe");
 		}
 	}
 

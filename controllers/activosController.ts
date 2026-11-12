@@ -1,6 +1,8 @@
 // Express
 import type { Request, Response } from "express-serve-static-core";
 import * as activosService from "../services/activosService.js";
+// Autorización
+import { esEmpleado } from "../services/autorizacion.js";
 // Servicios
 import { invalidarOperacion } from "../services/cacheInvalidation.js";
 import { cacheWrap } from "../services/cacheService.js";
@@ -9,20 +11,22 @@ import { ErrorHttp } from "../services/errors.js";
 
 // Controller: lista paginada de activos con filtros
 export const getActivos = async (req: Request, res: Response) => {
-	const esEmpleado = req.user?.rol === "empleado";
+	const rol = req.user?.rol;
 	const result = await activosService.getActivos(
 		req.validatedQuery as Record<string, string | undefined>,
-		esEmpleado ? req.user?.id : undefined,
+		esEmpleado(rol) ? req.user?.id : undefined,
+		rol,
 	);
 	res.json(result);
 };
 
 // Controller: activo individual por ID
 export const getActivoById = async (req: Request, res: Response) => {
-	const esEmpleado = req.user?.rol === "empleado";
+	const rol = req.user?.rol;
 	const result = await activosService.getActivoById(
 		req.params.id as string,
-		esEmpleado ? req.user?.id : undefined,
+		esEmpleado(rol) ? req.user?.id : undefined,
+		rol,
 	);
 	res.json({ data: result });
 };

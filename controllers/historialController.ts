@@ -1,6 +1,7 @@
 // Express
 import type { Request, Response } from "express-serve-static-core";
 // Errores
+import { exigirActivoAsignado } from "../services/autorizacion.js";
 import { ErrorHttp } from "../services/errors.js";
 // Servicios
 import {
@@ -15,6 +16,8 @@ export const historialActivo = async (req: Request, res: Response) => {
 	if (Number.isNaN(id)) {
 		throw new ErrorHttp(400, "ID del activo debe ser un número válido.");
 	}
+
+	await exigirActivoAsignado(req.user, id);
 
 	const {
 		page,

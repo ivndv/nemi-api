@@ -4,6 +4,8 @@ import type {
 	Request,
 	Response,
 } from "express-serve-static-core";
+// Autorización
+import { puedeVerCostos } from "../services/autorizacion.js";
 // Servicio
 import { invalidarOperacion } from "../services/cacheInvalidation.js";
 import * as licenciasService from "../services/licenciasService.js";
@@ -17,6 +19,7 @@ export const listar = async (
 	try {
 		const data = await licenciasService.listarLicencias(
 			req.validatedQuery as Record<string, string | undefined>,
+			puedeVerCostos(req.user?.rol),
 		);
 		res.json(data);
 	} catch (error) {
@@ -31,7 +34,10 @@ export const detalle = async (
 	next: NextFunction,
 ) => {
 	try {
-		const data = await licenciasService.getLicencia(Number(req.params.id));
+		const data = await licenciasService.getLicencia(
+			Number(req.params.id),
+			puedeVerCostos(req.user?.rol),
+		);
 		res.json({ data });
 	} catch (error) {
 		next(error);
@@ -99,6 +105,7 @@ export const renovaciones = async (
 	try {
 		const data = await licenciasService.listarRenovaciones(
 			Number(req.params.id),
+			puedeVerCostos(req.user?.rol),
 		);
 		res.json({ data });
 	} catch (error) {

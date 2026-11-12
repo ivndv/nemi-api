@@ -2,13 +2,26 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import db from "../config/db.js";
 import env from "../config/env.js";
 import { adjuntos, personas } from "../db/schema.js";
+import { esEmpleado, exigirEntidadAdjunto } from "./autorizacion.js";
 import { ErrorHttp } from "./errors.js";
 import { registrarEvento } from "./eventosService.js";
 import { etiqueta } from "./presentacion.js";
 import * as r2Service from "./r2Service.js";
 
 // Lista los adjuntos de una entidad
-export async function listarAdjuntos(entidad?: string, entidadId?: number) {
+export async function listarAdjuntos(
+	entidad?: string,
+	entidadId?: number,
+	usuario?: { id?: number; rol?: string },
+) {
+	// Un empleado solo ve adjuntos de sus activos, incidencias, solicitudes o mantenimientos
+	if (esEmpleado(usuario?.rol)) {
+		if (!entidad || !entidadId) {
+			throw new ErrorHttp(404, "No se encontraron adjuntos");
+		}
+		await exigirEntidadAdjunto(usuario, entidad, entidadId);
+	}
+
 	const filtros = [isNull(adjuntos.deleted_at)];
 	if (entidad) {
 		filtros.push(

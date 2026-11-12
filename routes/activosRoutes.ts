@@ -87,6 +87,7 @@ router.post(
 router.get(
 	"/datos-auxiliares",
 	autenticar,
+	permisos("Administrador", "Técnico", "Almacén"),
 	activosController.obtenerDatosAuxiliares,
 );
 

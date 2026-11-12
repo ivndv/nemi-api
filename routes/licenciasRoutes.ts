@@ -24,16 +24,32 @@ const router = express.Router();
 router.param("id", validarParamId);
 router.param("asiento", validarParamAsiento);
 
-// Lectura para todos los usuarios autenticados
+// Lectura para administrador, técnico y almacén
 router.get(
 	"/",
 	autenticar,
+	permisos("Administrador", "Técnico", "Almacén"),
 	validarQuery(licenciasQuerySchema),
 	licenciasController.listar,
 );
-router.get("/:id", autenticar, licenciasController.detalle);
-router.get("/:id/asientos", autenticar, licenciasController.asientos);
-router.get("/:id/renovaciones", autenticar, licenciasController.renovaciones);
+router.get(
+	"/:id",
+	autenticar,
+	permisos("Administrador", "Técnico", "Almacén"),
+	licenciasController.detalle,
+);
+router.get(
+	"/:id/asientos",
+	autenticar,
+	permisos("Administrador", "Técnico", "Almacén"),
+	licenciasController.asientos,
+);
+router.get(
+	"/:id/renovaciones",
+	autenticar,
+	permisos("Administrador", "Técnico", "Almacén"),
+	licenciasController.renovaciones,
+);
 
 // Escritura
 router.post(
